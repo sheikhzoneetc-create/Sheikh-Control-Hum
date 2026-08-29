@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sheikh Control Hub</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="header">
+    <div class="search-box">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="globalSearch" placeholder="নাম, নাম্বার, জিমেইল বা ফাইল খুঁজুন...">
+    </div>
+  </div>
+
+  <div class="container">
+    
+    <div id="tab-packages" class="tab-content">
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-title">সক্রিয় কাস্টমার</div>
+          <div class="stat-val" id="count-active-pkg">০ জন</div>
+        </div>
+        <div class="stat-box slot-stat">
+          <div class="stat-title">ফাঁকা ফ্যামিলি স্লট</div>
+          <div class="stat-val" id="count-free-slots">০ টি</div>
+        </div>
+      </div>
+
+      <div class="action-btn-group">
+        <button class="btn btn-primary" onclick="openModal('pkgModal')">
+          <i class="fa-solid fa-user-plus"></i> কাস্টমার যোগ করুন
+        </button>
+        <button class="btn btn-secondary" onclick="openModal('familyPackModal')">
+          <i class="fa-solid fa-layer-group"></i> নতুন ফ্যামিলি প্যাক
+        </button>
+      </div>
+
+      <div id="packageList"></div>
+    </div>
+
+    <div id="tab-gmails" class="tab-content" style="display: none;">
+      <div class="stats-grid">
+        <div class="stat-box sale-stat">
+          <div class="stat-title">ফ্রেশ বিক্রির স্টক</div>
+          <div class="stat-val" id="count-sale-stock">০ টি</div>
+        </div>
+        <div class="stat-box prem-stat">
+          <div class="stat-title">প্রিমিয়াম স্টক</div>
+          <div class="stat-val" id="count-prem-stock">০ টি</div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="openModal('gmailModal')">
+        <i class="fa-solid fa-plus"></i> নতুন জিমেইল যোগ করুন
+      </button>
+
+      <div id="gmailList"></div>
+    </div>
+
+    <div id="tab-vault" class="tab-content" style="display: none;">
+      <div class="action-btn-group">
+        <button class="btn btn-primary" onclick="openModal('passModal')">
+          <i class="fa-solid fa-key"></i> পাসওয়ার্ড / লিংক সেভ
+        </button>
+        <button class="btn btn-secondary" onclick="openModal('docModal')">
+          <i class="fa-solid fa-file-arrow-up"></i> ডকুমেন্ট / ছবি
+        </button>
+      </div>
+
+      <div id="vaultList"></div>
+    </div>
+
+    <div id="tab-videos" class="tab-content" style="display: none;">
+      <button class="btn btn-primary" onclick="openModal('videoModal')">
+        <i class="fa-solid fa-video"></i> নতুন ভিডিও লিংক করুন
+      </button>
+      <div id="videoCategoryList"></div>
+    </div>
+
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-item active" onclick="switchTab('packages', this)">
+      <i class="fa-solid fa-box-open"></i>
+      <span>প্যাকেজ</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('gmails', this)">
+      <i class="fa-solid fa-envelope"></i>
+      <span>জিমেইল</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('vault', this)">
+      <i class="fa-solid fa-vault"></i>
+      <span>ভল্ট</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('videos', this)">
+      <i class="fa-solid fa-circle-play"></i>
+      <span>ভিডিও</span>
+    </button>
+  </div>
+
+  <div id="modalContainer"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
