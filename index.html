@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Sheikh Control Hub</title>
+  
+  <!-- মোবাইল কনসোল টুল (Eruda DevTools) -->
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <script>eruda.init();</script>
+
   <link rel="stylesheet" href="style.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -38,9 +43,6 @@
     </section>
 
   </main>
-
-  <!-- ফ্লোটিং অ্যাকশন বাটন (সেটিংস/রিফ্রেশ) -->
-  <button class="floating-btn" onclick="location.reload()" title="রিফ্রেশ">⚙️</button>
 
   <!-- সর্বজনীন পপআপ মোডাল -->
   <div id="modal-backdrop" class="modal-overlay" style="display: none;">
