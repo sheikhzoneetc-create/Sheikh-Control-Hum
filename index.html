@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
   <style>
-    /* Clean Modal Styles */
+    /* Modal Styles */
     .modal {
       display: none;
       position: fixed;
@@ -43,9 +43,6 @@
       box-sizing: border-box;
       outline: none;
     }
-    .modal-content input:focus {
-      border-color: #38bdf8;
-    }
   </style>
 </head>
 <body>
@@ -54,12 +51,12 @@
   <div style="padding: 12px 16px;">
     <div style="position: relative;">
       <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 12px; color: #64748b;"></i>
-      <input type="text" id="globalSearch" placeholder="নাম, নাম্বার, জিমেইল খুঁজুন..." 
+      <input type="text" id="globalSearch" placeholder="নাম বা নাম্বার খুঁজুন..." 
              style="width: 100%; padding: 10px 10px 10px 38px; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #fff; box-sizing: border-box; outline: none;">
     </div>
   </div>
 
-  <!-- Main Content Container -->
+  <!-- Main Content -->
   <div style="padding: 0 16px 90px 16px;">
     
     <!-- Tab 1: Packages -->
@@ -76,7 +73,7 @@
       </div>
 
       <div style="display: flex; gap: 10px; margin-bottom: 14px;">
-        <button id="btnOpenCustomerModal" class="btn btn-primary" style="flex: 1;">
+        <button id="btnOpenModal" class="btn btn-primary" style="flex: 1;">
           <i class="fa-solid fa-user-plus"></i> কাস্টমার যোগ করুন
         </button>
       </div>
@@ -110,7 +107,7 @@
 
   </div>
 
-  <!-- Bottom Navigation (All 4 Buttons Restored) -->
+  <!-- Bottom Navigation -->
   <div class="bottom-nav">
     <div class="nav-item active" data-tab="packages">
       <i class="fa-solid fa-box-archive"></i>
@@ -139,17 +136,163 @@
       <input type="number" id="custDays" placeholder="মেয়াদ কত দিন? (যেমন: 15 বা 30)" value="30">
       <input type="text" id="custGB" placeholder="ডাটা / জিবি (যেমন: 20)">
       <input type="text" id="custMin" placeholder="মিনিট (যেমন: 500)">
-      <input type="text" id="custPackName" placeholder="প্যাকেজের নাম (যেমন: প্যাক #১)">
-      <input type="text" id="custYtMail" placeholder="YouTube প্রিমিয়াম জিমেইল (ঐচ্ছিক)">
+      <input type="text" id="custPackName" placeholder="প্যাকেজের নাম">
+      <input type="text" id="custYtMail" placeholder="YouTube মেইল (ঐচ্ছিক)">
       
       <div style="display: flex; gap: 10px; margin-top: 14px;">
-        <button id="btnSubmitCustomer" class="btn btn-success" style="flex: 1;">সেভ করুন</button>
-        <button id="btnCloseCustomerModal" class="btn btn-danger" style="flex: 1;">বাতিল</button>
+        <button id="btnSubmitCust" class="btn btn-success" style="flex: 1;">সেভ করুন</button>
+        <button id="btnCloseModal" class="btn btn-danger" style="flex: 1;">বাতিল</button>
       </div>
     </div>
   </div>
 
-  <script type="module" src="app.js"></script>
+  <!-- Standalone Working Script -->
+  <script type="module">
+    import { db, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "./firebase-config.js";
+
+    // Telegram Init
+    if (window.Telegram?.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+    }
+
+    let allPackages = [];
+
+    // Tabs
+    document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const targetTab = item.getAttribute('data-tab');
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.bottom-nav .nav-item').forEach(el => el.classList.remove('active'));
+
+        const tabEl = document.getElementById(`tab-${targetTab}`);
+        if (tabEl) tabEl.style.display = 'block';
+        item.classList.add('active');
+      });
+    });
+
+    // Helper: Remaining Days
+    function getRemainingDays(expiryDateStr) {
+      if (!expiryDateStr) return 0;
+      const target = new Date(expiryDateStr);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+    }
+
+    // Render Cards
+    function renderPackages(list) {
+      const container = document.getElementById('packageList');
+      if (!container) return;
+      
+      document.getElementById('count-active-pkg').innerText = `${list.length} জন`;
+      
+      container.innerHTML = list.map(item => {
+        const daysLeft = getRemainingDays(item.expiryDate);
+        const badgeClass = daysLeft <= 3 ? 'badge-expired' : 'badge-active';
+        
+        return `
+          <div class="card">
+            <div class="card-title">
+              <span>${item.name || 'Unknown'} (${item.phone || 'N/A'})</span>
+              <span class="badge ${badgeClass}">${daysLeft} দিন বাকি</span>
+            </div>
+            <div style="font-size: 13px; color: #94a3b8; margin: 6px 0; line-height: 1.5;">
+              📦 <b>প্যাকেজ:</b> ${item.assignedPacks?.[0]?.packName || 'কাস্টম'} | 🌐 <b>ডাটা:</b> ${item.assignedPacks?.[0]?.gb || '০'} GB | 📞 <b>মিনিট:</b> ${item.assignedPacks?.[0]?.min || '০'} Min<br>
+              📅 <b>মেয়াদ:</b> ${item.joinDate || 'N/A'} থেকে ${item.expiryDate || 'N/A'} (🔄 রিনিউ: ${item.renewCount || 0} বার)
+              ${item.youtubeGmail ? `<br>🔴 <b>YouTube:</b> ${item.youtubeGmail}` : ''}
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+              <button class="btn btn-sm btn-success" data-action="renew" data-id="${item.id}" data-count="${item.renewCount || 0}">
+                <i class="fa-solid fa-arrows-rotate"></i> রিনিউ (+৩০ দিন)
+              </button>
+              <button class="btn btn-sm btn-danger" data-action="delete" data-id="${item.id}">
+                <i class="fa-solid fa-trash"></i> ডিলিট
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Card Actions (Renew/Delete)
+    document.getElementById('packageList')?.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const action = btn.getAttribute('data-action');
+      const id = btn.getAttribute('data-id');
+
+      if (action === 'renew') {
+        const currentCount = Number(btn.getAttribute('data-count') || 0);
+        const expDateObj = new Date();
+        expDateObj.setDate(expDateObj.getDate() + 30);
+        await updateDoc(doc(db, "packages", id), {
+          expiryDate: expDateObj.toISOString().split("T")[0],
+          renewCount: currentCount + 1
+        });
+      } else if (action === 'delete') {
+        await deleteDoc(doc(db, "packages", id));
+      }
+    });
+
+    // Modal Control
+    const modal = document.getElementById('customerModal');
+    document.getElementById('btnOpenModal').addEventListener('click', () => { modal.style.display = 'flex'; });
+    document.getElementById('btnCloseModal').addEventListener('click', () => { modal.style.display = 'none'; });
+
+    // Save Customer Form
+    document.getElementById('btnSubmitCust').addEventListener('click', async () => {
+      const name = document.getElementById('custName').value.trim();
+      const phone = document.getElementById('custPhone').value.trim();
+      const durationDays = Number(document.getElementById('custDays').value) || 30;
+      const gb = document.getElementById('custGB').value.trim() || "0";
+      const min = document.getElementById('custMin').value.trim() || "0";
+      const packName = document.getElementById('custPackName').value.trim() || "প্যাকেজ";
+      const youtubeGmail = document.getElementById('custYtMail').value.trim();
+
+      if (!name || !phone) {
+        alert("নাম ও ফোন নাম্বার লিখুন!");
+        return;
+      }
+
+      const joinDate = new Date().toISOString().split("T")[0];
+      const expDateObj = new Date();
+      expDateObj.setDate(expDateObj.getDate() + durationDays);
+      const expiryDate = expDateObj.toISOString().split("T")[0];
+
+      await addDoc(collection(db, "packages"), {
+        name,
+        phone,
+        durationDays,
+        assignedPacks: [{ packName, gb, min }],
+        hasYoutube: !!youtubeGmail,
+        youtubeGmail,
+        joinDate,
+        expiryDate,
+        renewCount: 0,
+        createdAt: Date.now()
+      });
+
+      // Clear & Close
+      document.getElementById('custName').value = '';
+      document.getElementById('custPhone').value = '';
+      modal.style.display = 'none';
+    });
+
+    // Search
+    document.getElementById('globalSearch')?.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      renderPackages(allPackages.filter(p => (p.name && p.name.toLowerCase().includes(q)) || (p.phone && p.phone.includes(q))));
+    });
+
+    // Realtime Data
+    const q = query(collection(db, "packages"), orderBy("createdAt", "desc"));
+    onSnapshot(q, (snapshot) => {
+      const list = [];
+      snapshot.forEach(docSnap => list.push({ id: docSnap.id, ...docSnap.data() }));
+      allPackages = list;
+      renderPackages(list);
+    });
+  </script>
 </body>
 </html>
-
