@@ -11,17 +11,18 @@ import {
   onSnapshot 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// ধাপ ১-এ ফায়ারবেস থেকে পাওয়া আপনার তথ্যগুলো এখানে বসিয়ে দিন
+// Your Firebase configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCTAOFNVhvCBKCa4AsoJmN2KGKRZiPoEH0",
+  authDomain: "sheikh-control-hub.firebaseapp.com",
+  projectId: "sheikh-control-hub",
+  storageBucket: "sheikh-control-hub.firebasestorage.app",
+  messagingSenderId: "197517134186",
+  appId: "1:197517134186:web:f36df2b659b5ac61773d13",
+  measurementId: "G-XXS10FLEDG"
 };
 
-// Firebase Initialize
+// Initialize Firebase & Firestore
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
