@@ -28,7 +28,6 @@ window.copyVaultText = function(text) {
 // ==========================================
 const masterPkgCol = collection(db, "family_masters");
 const customerPkgCol = collection(db, "family_customers");
-const gmailCol = collection(db, "gmail_stocks");
 
 function renderPackagesUI() {
   const root = document.getElementById("packages-root");
