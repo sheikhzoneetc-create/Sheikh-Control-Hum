@@ -1,5 +1,9 @@
 import { db, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "./firebase-config.js";
 
+let localMasters = [];
+let localCustomers = [];
+let localGmail = [];
+
 // ১. গ্লোবাল নেভিগেশন
 window.switchMainTab = function(tabId, btnElement) {
   document.querySelectorAll(".tab-sec").forEach(sec => sec.classList.remove("active"));
@@ -28,12 +32,9 @@ window.copyVaultText = function(text) {
 // ==========================================
 const masterPkgCol = collection(db, "family_masters");
 const customerPkgCol = collection(db, "family_customers");
-let localMasters = [];
-let localCustomers = [];
-let localGmail = [];
 
 onSnapshot(masterPkgCol, (snap) => {
-  localMasters = [];
+   localMasters = [];
   snap.forEach(d => localMasters.push({ id: d.id, ...d.data() }));
   renderPackagesUI();
 });
