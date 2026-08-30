@@ -4,9 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Sheikh Control Hub</title>
+  
+  <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
+  <!-- মোবাইল স্ক্রিনে লাইভ এরর দেখার জন্য Eruda Debugger -->
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <script>eruda.init();</script>
+
+  <!-- Icons & Styling -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
+  
   <style>
     /* Modal Styles */
     .modal {
@@ -56,7 +65,7 @@
     </div>
   </div>
 
-  <!-- Main Content -->
+  <!-- Main Content Area -->
   <div style="padding: 0 16px 90px 16px;">
     
     <!-- Tab 1: Packages -->
@@ -146,11 +155,11 @@
     </div>
   </div>
 
-  <!-- Standalone Working Script -->
+  <!-- Main Standalone Logic -->
   <script type="module">
     import { db, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "./firebase-config.js";
 
-    // Telegram Init
+    // Telegram App Setup
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.ready();
       window.Telegram.WebApp.expand();
@@ -158,7 +167,7 @@
 
     let allPackages = [];
 
-    // Tabs
+    // Tabs Control
     document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
       item.addEventListener('click', () => {
         const targetTab = item.getAttribute('data-tab');
@@ -171,7 +180,7 @@
       });
     });
 
-    // Helper: Remaining Days
+    // Calculate Days
     function getRemainingDays(expiryDateStr) {
       if (!expiryDateStr) return 0;
       const target = new Date(expiryDateStr);
@@ -215,7 +224,7 @@
       }).join('');
     }
 
-    // Card Actions (Renew/Delete)
+    // Card Buttons Handler
     document.getElementById('packageList')?.addEventListener('click', async (e) => {
       const btn = e.target.closest('button');
       if (!btn) return;
@@ -235,7 +244,7 @@
       }
     });
 
-    // Modal Control
+    // Open/Close Modal
     const modal = document.getElementById('customerModal');
     document.getElementById('btnOpenModal').addEventListener('click', () => { modal.style.display = 'flex'; });
     document.getElementById('btnCloseModal').addEventListener('click', () => { modal.style.display = 'none'; });
@@ -279,13 +288,13 @@
       modal.style.display = 'none';
     });
 
-    // Search
+    // Search Box Logic
     document.getElementById('globalSearch')?.addEventListener('input', (e) => {
       const q = e.target.value.toLowerCase().trim();
       renderPackages(allPackages.filter(p => (p.name && p.name.toLowerCase().includes(q)) || (p.phone && p.phone.includes(q))));
     });
 
-    // Realtime Data
+    // Realtime Database Listener
     const q = query(collection(db, "packages"), orderBy("createdAt", "desc"));
     onSnapshot(q, (snapshot) => {
       const list = [];
