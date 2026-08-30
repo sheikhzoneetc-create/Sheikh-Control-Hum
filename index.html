@@ -9,37 +9,40 @@
 </head>
 <body>
 
-  <!-- টপ বার -->
+  <!-- টপ হেডার -->
   <header class="top-bar">
     <h2>Sheikh Control Hub</h2>
   </header>
 
-  <!-- মূল কন্টেন্ট এরিয়া -->
+  <!-- মূল কন্টেন্ট স্ক্রিনসমূহ -->
   <main id="app-container" class="main-content">
     
-    <!-- ১. প্যাকেজ সেকশন -->
+    <!-- ১. প্যাকেজ ট্যাব -->
     <section id="packages-sec" class="tab-sec active">
       <div id="packages-root"></div>
     </section>
 
-    <!-- ২. জিমেইল সেকশন -->
+    <!-- ২. জিমেইল ট্যাব -->
     <section id="gmail-sec" class="tab-sec">
       <div id="gmail-root"></div>
     </section>
 
-    <!-- ৩. ভল্ট সেকশন (পাসওয়ার্ড, ডকুমেন্ট ও ভিডিও) -->
+    <!-- ৩. ভল্ট ট্যাব -->
     <section id="vault-sec" class="tab-sec">
       <div id="vault-root"></div>
     </section>
 
-    <!-- ৪. রিমাইন্ডার ও অ্যালার্ম সেকশন -->
+    <!-- ৪. রিমাইন্ডার ট্যাব -->
     <section id="reminder-sec" class="tab-sec">
       <div id="reminder-root"></div>
     </section>
 
   </main>
 
-  <!-- সর্বজনীন মোডাল (পপআপ ডায়ালগ) -->
+  <!-- ফ্লোটিং অ্যাকশন বাটন (সেটিংস/রিফ্রেশ) -->
+  <button class="floating-btn" onclick="location.reload()" title="রিফ্রেশ">⚙️</button>
+
+  <!-- সর্বজনীন পপআপ মোডাল -->
   <div id="modal-backdrop" class="modal-overlay" style="display: none;">
     <div class="modal-card">
       <div class="modal-header">
@@ -50,7 +53,7 @@
     </div>
   </div>
 
-  <!-- নিচের মেনুবার (৪টি প্রধান ট্যাব) -->
+  <!-- বটম মেনুবার -->
   <nav class="bottom-nav">
     <button class="nav-item active" onclick="window.switchMainTab('packages-sec', this)">
       <span class="icon">📦</span>
@@ -70,7 +73,6 @@
     </button>
   </nav>
 
-  <!-- মূল স্ক্রিপ্ট লোড -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
