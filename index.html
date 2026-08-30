@@ -8,7 +8,7 @@
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   
-  <!-- মোবাইল স্ক্রিনে লাইভ এরর দেখার জন্য Eruda Debugger -->
+  <!-- Mobile Console Debugger -->
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
   <script>eruda.init();</script>
 
@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="style.css">
   
   <style>
-    /* Modal Styles */
+    /* Clean Modal Styles */
     .modal {
       display: none;
       position: fixed;
@@ -51,6 +51,9 @@
       font-size: 14px;
       box-sizing: border-box;
       outline: none;
+    }
+    .modal-content input:focus {
+      border-color: #38bdf8;
     }
   </style>
 </head>
@@ -145,8 +148,8 @@
       <input type="number" id="custDays" placeholder="মেয়াদ কত দিন? (যেমন: 15 বা 30)" value="30">
       <input type="text" id="custGB" placeholder="ডাটা / জিবি (যেমন: 20)">
       <input type="text" id="custMin" placeholder="মিনিট (যেমন: 500)">
-      <input type="text" id="custPackName" placeholder="প্যাকেজের নাম">
-      <input type="text" id="custYtMail" placeholder="YouTube মেইল (ঐচ্ছিক)">
+      <input type="text" id="custPackName" placeholder="প্যাকেজের নাম (যেমন: প্যাক #১)">
+      <input type="text" id="custYtMail" placeholder="YouTube প্রিমিয়াম জিমেইল (ঐচ্ছিক)">
       
       <div style="display: flex; gap: 10px; margin-top: 14px;">
         <button id="btnSubmitCust" class="btn btn-success" style="flex: 1;">সেভ করুন</button>
@@ -155,9 +158,9 @@
     </div>
   </div>
 
-  <!-- Main Standalone Logic -->
+  <!-- Firebase Logic Without Any Dependency Errors -->
   <script type="module">
-    import { db, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "./firebase-config.js";
+    import { db, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "./firebase-config.js";
 
     // Telegram App Setup
     if (window.Telegram?.WebApp) {
@@ -194,7 +197,8 @@
       const container = document.getElementById('packageList');
       if (!container) return;
       
-      document.getElementById('count-active-pkg').innerText = `${list.length} জন`;
+      const countEl = document.getElementById('count-active-pkg');
+      if (countEl) countEl.innerText = `${list.length} জন`;
       
       container.innerHTML = list.map(item => {
         const daysLeft = getRemainingDays(item.expiryDate);
@@ -224,7 +228,7 @@
       }).join('');
     }
 
-    // Card Buttons Handler
+    // Card Buttons Handler (Renew / Delete)
     document.getElementById('packageList')?.addEventListener('click', async (e) => {
       const btn = e.target.closest('button');
       if (!btn) return;
@@ -285,6 +289,10 @@
       // Clear & Close
       document.getElementById('custName').value = '';
       document.getElementById('custPhone').value = '';
+      document.getElementById('custGB').value = '';
+      document.getElementById('custMin').value = '';
+      document.getElementById('custPackName').value = '';
+      document.getElementById('custYtMail').value = '';
       modal.style.display = 'none';
     });
 
@@ -294,11 +302,11 @@
       renderPackages(allPackages.filter(p => (p.name && p.name.toLowerCase().includes(q)) || (p.phone && p.phone.includes(q))));
     });
 
-    // Realtime Database Listener
-    const q = query(collection(db, "packages"), orderBy("createdAt", "desc"));
-    onSnapshot(q, (snapshot) => {
+    // Realtime Database Listener (Pure collection listener without orderBy error)
+    onSnapshot(collection(db, "packages"), (snapshot) => {
       const list = [];
       snapshot.forEach(docSnap => list.push({ id: docSnap.id, ...docSnap.data() }));
+      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       allPackages = list;
       renderPackages(list);
     });
