@@ -1,190 +1,205 @@
-:root {
-  --bg: #0b0f19;
-  --card: #151e32;
-  --card-border: #23314d;
-  --input-bg: #070a12;
-  --primary: #3b82f6;
-  --primary-hover: #2563eb;
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --text: #f8fafc;
-  --text-muted: #94a3b8;
-}
-
 * {
-  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  user-select: none;
 }
 
 body {
-  background-color: var(--bg);
-  color: var(--text);
-  padding-bottom: 90px;
+  background-color: #0d1117;
+  color: #c9d1d9;
+  min-height: 100vh;
+  padding-bottom: 75px;
 }
 
-/* Header & Search Bar */
-.header {
-  padding: 12px 16px;
-  background: var(--card);
-  border-bottom: 1px solid var(--card-border);
+.top-bar {
+  background-color: #161b22;
+  padding: 14px 16px;
+  border-bottom: 1px solid #30363d;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 50;
 }
 
-.search-box {
-  position: relative;
-  width: 100%;
-}
-
-.search-box input {
-  width: 100%;
-  padding: 12px 14px 12px 40px;
-  background: var(--input-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 10px;
-  color: var(--text);
-  font-size: 14px;
-  outline: none;
-}
-
-.search-box i {
-  position: absolute;
-  left: 14px;
-  top: 15px;
-  color: var(--text-muted);
-}
-
-/* Main Layout */
-.container {
-  padding: 15px;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-.stat-box {
-  background: var(--card);
-  border: 1px solid var(--card-border);
-  padding: 12px;
-  border-radius: 10px;
-  border-left: 4px solid var(--primary);
-}
-
-.stat-box.slot-stat { border-left-color: var(--success); }
-.stat-box.sale-stat { border-left-color: var(--warning); }
-.stat-box.prem-stat { border-left-color: var(--primary); }
-
-.stat-title {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.stat-val {
+.top-bar h2 {
   font-size: 18px;
-  font-weight: bold;
-  margin-top: 4px;
-}
-
-/* Action Buttons */
-.action-btn-group {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-.btn {
-  padding: 12px 14px;
-  border: none;
-  border-radius: 10px;
   font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  justify-content: center;
-  transition: 0.2s;
+  color: #58a6ff;
 }
 
-.btn-primary { background: var(--primary); color: white; width: 100%; }
-.btn-secondary { background: #1e293b; color: var(--text); border: 1px solid var(--card-border); }
-.btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 6px; }
-.btn-success { background: var(--success); color: white; }
-.btn-danger { background: var(--danger); color: white; }
-.btn-warning { background: var(--warning); color: #000; }
-.btn-copy { background: #23314d; color: var(--text); }
+.main-content {
+  padding: 16px;
+}
 
-/* Customer & Item Cards */
+.tab-sec {
+  display: none;
+}
+
+.tab-sec.active {
+  display: block;
+}
+
+/* কার্ড স্টাইল */
 .card {
-  background: var(--card);
-  border: 1px solid var(--card-border);
+  background-color: #161b22;
+  border: 1px solid #30363d;
   border-radius: 12px;
   padding: 14px;
   margin-bottom: 12px;
 }
 
 .card-title {
-  font-size: 15px;
-  font-weight: bold;
-  margin-bottom: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: #f0f6fc;
+  margin-bottom: 6px;
 }
 
+/* বাটনসমূহ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s;
+}
+
+.btn:active {
+  opacity: 0.8;
+}
+
+.btn-primary { background-color: #238636; color: #fff; width: 100%; }
+.btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 6px; }
+.btn-danger { background-color: #da3633; color: #fff; }
+.btn-success { background-color: #238636; color: #fff; }
+.btn-copy { background-color: #388bfd; color: #fff; }
+
+/* ব্যাজ */
 .badge {
-  padding: 3px 8px;
-  border-radius: 6px;
   font-size: 11px;
-  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
 }
 
-.badge-active { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid var(--success); }
-.badge-expired { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid var(--danger); }
-.badge-pending { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid var(--warning); }
+.badge-active { background-color: rgba(35, 134, 54, 0.2); color: #3fb950; }
+.badge-pending { background-color: rgba(210, 153, 34, 0.2); color: #d29922; }
+.badge-expired { background-color: rgba(218, 54, 51, 0.2); color: #f85149; }
 
-/* Bottom Bar */
+/* বটম নেভিগেশন */
 .bottom-nav {
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 65px;
-  background: var(--card);
-  border-top: 1px solid var(--card-border);
+  background-color: #161b22;
+  border-top: 1px solid #30363d;
   display: flex;
   justify-content: space-around;
-  align-items: center;
+  padding: 8px 0;
   z-index: 100;
 }
 
 .nav-item {
+  background: none;
+  border: none;
+  color: #8b949e;
   display: flex;
   flex-direction: column;
   align-items: center;
   font-size: 11px;
-  color: var(--text-muted);
   cursor: pointer;
-  border: none;
-  background: none;
-  gap: 4px;
+  flex: 1;
 }
 
-.nav-item.active {
-  color: var(--primary);
+.nav-item .icon { font-size: 18px; margin-bottom: 2px; }
+.nav-item.active { color: #58a6ff; font-weight: 600; }
+
+/* সাব-ট্যাব সুইচার */
+.sub-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #8b949e;
+  padding: 8px 4px;
+  font-size: 13px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.sub-tab-btn.active-sub {
+  background: #1f6feb;
+  color: #fff;
   font-weight: bold;
 }
 
-.nav-item i {
+/* মোডাল ডায়ালগ */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.modal-card {
+  background: #161b22;
+  width: 90%;
+  max-width: 380px;
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid #30363d;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #8b949e;
   font-size: 18px;
+  cursor: pointer;
+}
+
+.input-field {
+  width: 100%;
+  padding: 10px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+/* ফ্লোটিং সেটিংস বাটন */
+.floating-btn {
+  position: fixed;
+  bottom: 85px;
+  right: 18px;
+  background: #1f6feb;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 46px;
+  height: 46px;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  z-index: 90;
 }
