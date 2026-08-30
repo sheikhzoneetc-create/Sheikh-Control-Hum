@@ -28,6 +28,22 @@ window.copyVaultText = function(text) {
 // ==========================================
 const masterPkgCol = collection(db, "family_masters");
 const customerPkgCol = collection(db, "family_customers");
+let localMasters = [];
+let localCustomers = [];
+let localGmail = [];
+
+onSnapshot(masterPkgCol, (snap) => {
+  localMasters = [];
+  snap.forEach(d => localMasters.push({ id: d.id, ...d.data() }));
+  renderPackagesUI();
+});
+
+onSnapshot(customerPkgCol, (snap) => {
+  localCustomers = [];
+  snap.forEach(d => localCustomers.push({ id: d.id, ...d.data() }));
+  renderPackagesUI();
+});
+
 
 function renderPackagesUI() {
   const root = document.getElementById("packages-root");
