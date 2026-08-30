@@ -1,107 +1,196 @@
-import { listenPackagesData, assignCustomerToSlot, renewCustomer, deleteCustomer, getRemainingDays } from "./packages.js";
+// সব মডিউল ইমপোর্ট
+import { listenPackages, renderPackagesSection } from "./packages.js";
+import { listenGmailStock, renderGmailSection } from "./gmail.js";
+import { listenVaultData, listenVideoVault, renderVaultSection, addPasswordItem, addDocumentItem, addVideoToVault, deleteVaultItem, deleteVideoItem } from "./vault.js";
+import { listenReminders, renderReminderSection, startAlarmChecker, addReminder, completeReminder, deleteReminder } from "./reminder.js";
 
-const tg = window.Telegram?.WebApp;
-if (tg) {
-  tg.ready();
-  tg.expand();
-}
+// স্টেট ডাটা
+let localPackages = [];
+let localGmail = [];
+let localVault = [];
+let localVideos = [];
+let localReminders = [];
 
-let allPackages = [];
-
-window.switchTab = function(tabName, btnElement) {
-  document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-  
-  const targetTab = document.getElementById(`tab-${tabName}`);
-  if (targetTab) targetTab.style.display = 'block';
-  if (btnElement) btnElement.classList.add('active');
-};
-
-document.getElementById('globalSearch')?.addEventListener('input', (e) => {
-  const query = e.target.value.toLowerCase().trim();
-  renderPackages(allPackages.filter(p => (p.name && p.name.toLowerCase().includes(query)) || (p.phone && p.phone.includes(query))));
+// লাইভ ডাটা লিসেনার সেটআপ
+listenPackages((data) => {
+  localPackages = data;
+  const pkgRoot = document.getElementById("packages-root");
+  if (pkgRoot) renderPackagesSection(pkgRoot, localPackages);
 });
 
-function renderPackages(list) {
-  const container = document.getElementById('packageList');
-  if (!container) return;
-  
-  const countEl = document.getElementById('count-active-pkg');
-  if (countEl) countEl.innerText = `${list.length} জন`;
-  
-  container.innerHTML = list.map(item => {
-    const daysLeft = getRemainingDays(item.expiryDate);
-    const badgeClass = daysLeft <= 3 ? 'badge-expired' : 'badge-active';
-    
-    return `
-      <div class="card">
-        <div class="card-title">
-          <span>${item.name || 'Unknown'} (${item.phone || 'N/A'})</span>
-          <span class="badge ${badgeClass}">${daysLeft} দিন বাকি</span>
-        </div>
-        <div style="font-size: 13px; color: #94a3b8; margin: 6px 0; line-height: 1.5;">
-          📦 <b>প্যাকেজ:</b> ${item.assignedPacks?.[0]?.packName || 'কাস্টম'} | 🌐 <b>ডাটা:</b> ${item.assignedPacks?.[0]?.gb || '০'} GB | 📞 <b>মিনিট:</b> ${item.assignedPacks?.[0]?.min || '০'} Min<br>
-          📅 <b>মেয়াদ:</b> ${item.joinDate} থেকে ${item.expiryDate} (🔄 রিনিউ: ${item.renewCount || 0} বার)
-          ${item.youtubeGmail ? `<br>🔴 <b>YouTube:</b> ${item.youtubeGmail}` : ''}
-        </div>
-        <div style="display: flex; gap: 8px; margin-top: 10px;">
-          <button class="btn btn-sm btn-success" onclick="handleRenew('${item.id}', ${item.renewCount || 0})">
-            <i class="fa-solid fa-arrows-rotate"></i> রিনিউ (+৩০ দিন)
-          </button>
-          <button class="btn btn-sm btn-danger" onclick="handleDeleteCustomer('${item.id}')">
-            <i class="fa-solid fa-trash"></i> ডিলিট
-          </button>
-        </div>
+listenGmailStock((data) => {
+  localGmail = data;
+  const gmailRoot = document.getElementById("gmail-root");
+  if (gmailRoot) renderGmailSection(gmailRoot, localGmail);
+});
+
+function refreshVaultUI() {
+  const vaultRoot = document.getElementById("vault-root");
+  if (vaultRoot) renderVaultSection(vaultRoot, localVault, localVideos);
+}
+
+listenVaultData((data) => {
+  localVault = data;
+  refreshVaultUI();
+});
+
+listenVideoVault((data) => {
+  localVideos = data;
+  refreshVaultUI();
+});
+
+listenReminders((data) => {
+  localReminders = data;
+  const remRoot = document.getElementById("reminder-root");
+  if (remRoot) renderReminderSection(remRoot, localReminders);
+});
+
+// ব্যাকগ্রাউন্ড অ্যালার্ম চেকার চালু
+startAlarmChecker(localReminders);
+
+// মেনু ট্যাব সুইচিং লজিক
+window.switchMainTab = function(tabId, btnElement) {
+  document.querySelectorAll(".tab-sec").forEach(sec => sec.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(btn => btn.classList.remove("active"));
+
+  const target = document.getElementById(tabId);
+  if (target) target.classList.add("active");
+  if (btnElement) btnElement.classList.add("active");
+};
+
+// ভল্ট রি-রেন্ডার ট্রিগার
+window.triggerVaultReRender = function() {
+  refreshVaultUI();
+};
+
+// মোডাল খোলা ও বন্ধের ফাংশন
+window.closeAnyModal = function() {
+  const modal = document.getElementById("modal-backdrop");
+  if (modal) modal.style.display = "none";
+};
+
+// টেক্সট কপি
+window.copyVaultText = function(text) {
+  navigator.clipboard.writeText(text);
+  alert("📋 কপি করা হয়েছে!");
+};
+
+// ডিলিট ও কমপ্লিট হ্যান্ডলারসমূহ
+window.handleDeleteVaultItem = async function(id) {
+  if (confirm("এই আইটেমটি ডিলিট করতে চান?")) {
+    await deleteVaultItem(id);
+  }
+};
+
+window.handleDeleteVideoItem = async function(id) {
+  if (confirm("ভিডিওটি ডিলিট করতে চান?")) {
+    await deleteVideoItem(id);
+  }
+};
+
+window.handleCompleteReminder = async function(id) {
+  await completeReminder(id);
+};
+
+window.handleDeleteReminder = async function(id) {
+  if (confirm("টাস্কটি মুছে ফেলতে চান?")) {
+    await deleteReminder(id);
+  }
+};
+
+// রিমাইন্ডার পপআপ
+window.openReminderModal = function() {
+  const modal = document.getElementById("modal-backdrop");
+  const title = document.getElementById("modal-title");
+  const body = document.getElementById("modal-body");
+
+  title.innerText = "⏰ নতুন কাজের অ্যালার্ম";
+  body.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <input type="text" id="remTaskTitle" placeholder="কাজের নাম (যেমন: সিম রিচার্জ)" class="input-field">
+      <input type="datetime-local" id="remTaskTime" class="input-field">
+      <textarea id="remTaskNote" placeholder="দরকারি নোট (ঐচ্ছিক)" class="input-field" rows="2"></textarea>
+      <button class="btn btn-primary" id="btnSaveRem">সংরক্ষণ করুন</button>
+    </div>
+  `;
+
+  modal.style.display = "flex";
+
+  document.getElementById("btnSaveRem").onclick = async () => {
+    const t = document.getElementById("remTaskTitle").value;
+    const time = document.getElementById("remTaskTime").value;
+    const note = document.getElementById("remTaskNote").value;
+
+    if (!t || !time) {
+      alert("কাজের নাম ও সময় দিন!");
+      return;
+    }
+
+    await addReminder(t, time, note);
+    window.closeAnyModal();
+  };
+};
+
+// ভল্ট পপআপ
+window.openVaultModal = function(type) {
+  const modal = document.getElementById("modal-backdrop");
+  const title = document.getElementById("modal-title");
+  const body = document.getElementById("modal-body");
+
+  if (type === 'password') {
+    title.innerText = "🔑 নতুন পাসওয়ার্ড যোগ";
+    body.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <input type="text" id="vTitle" placeholder="অ্যাকাউন্টের নাম (যেমন: cPanel)" class="input-field">
+        <input type="text" id="vUser" placeholder="ইউজারনেম / ইমেইল" class="input-field">
+        <input type="text" id="vSecret" placeholder="পাসওয়ার্ড / পিন" class="input-field">
+        <button class="btn btn-primary" id="btnSaveV">সেভ করুন</button>
       </div>
     `;
-  }).join('');
-}
-
-window.handleRenew = async function(id, count) {
-  await renewCustomer(id, 30, count);
-};
-
-window.handleDeleteCustomer = async function(id) {
-  await deleteCustomer(id);
-};
-
-window.openCustomerModal = function() {
-  document.getElementById('customerModal').style.display = 'flex';
-};
-
-window.closeModal = function(id) {
-  document.getElementById(id).style.display = 'none';
-};
-
-window.submitCustomerForm = async function() {
-  const name = document.getElementById('custName').value.trim();
-  const phone = document.getElementById('custPhone').value.trim();
-  const durationDays = Number(document.getElementById('custDays').value) || 30;
-  const gb = document.getElementById('custGB').value.trim() || "0";
-  const min = document.getElementById('custMin').value.trim() || "0";
-  const packName = document.getElementById('custPackName').value.trim() || "প্যাকেজ";
-  const youtubeGmail = document.getElementById('custYtMail').value.trim();
-
-  if (!name || !phone) {
-    alert("দয়া করে নাম ও ফোন নাম্বার লিখুন!");
-    return;
+    modal.style.display = "flex";
+    document.getElementById("btnSaveV").onclick = async () => {
+      await addPasswordItem(
+        document.getElementById("vTitle").value,
+        document.getElementById("vUser").value,
+        document.getElementById("vSecret").value
+      );
+      window.closeAnyModal();
+    };
+  } else if (type === 'doc') {
+    title.innerText = "📄 নতুন ডকুমেন্ট লিংক";
+    body.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <input type="text" id="vDocTitle" placeholder="ডকুমেন্টের নাম" class="input-field">
+        <input type="text" id="vDocLink" placeholder="ফাইল বা ড্রাইভ লিংক" class="input-field">
+        <button class="btn btn-primary" id="btnSaveVDoc">সেভ করুন</button>
+      </div>
+    `;
+    modal.style.display = "flex";
+    document.getElementById("btnSaveVDoc").onclick = async () => {
+      await addDocumentItem(
+        document.getElementById("vDocTitle").value,
+        document.getElementById("vDocLink").value
+      );
+      window.closeAnyModal();
+    };
+  } else if (type === 'video') {
+    title.innerText = "🎬 নতুন ভিডিও লিংক";
+    body.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <input type="text" id="vVidTitle" placeholder="ভিডিওর নাম" class="input-field">
+        <input type="text" id="vVidCat" placeholder="ক্যাটাগরি (Reels/Quotes)" class="input-field">
+        <input type="text" id="vVidLink" placeholder="টেলিগ্রাম মেসেজ লিংক" class="input-field">
+        <button class="btn btn-primary" id="btnSaveVVid">সেভ করুন</button>
+      </div>
+    `;
+    modal.style.display = "flex";
+    document.getElementById("btnSaveVVid").onclick = async () => {
+      await addVideoToVault(
+        document.getElementById("vVidTitle").value,
+        document.getElementById("vVidCat").value,
+        document.getElementById("vVidLink").value
+      );
+      window.closeAnyModal();
+    };
   }
-
-  await assignCustomerToSlot({
-    name,
-    phone,
-    durationDays,
-    assignedPacks: [{ packName, gb, min }],
-    hasYoutube: !!youtubeGmail,
-    youtubeGmail
-  });
-
-  document.getElementById('custName').value = '';
-  document.getElementById('custPhone').value = '';
-  closeModal('customerModal');
 };
-
-listenPackagesData(data => { 
-  allPackages = data; 
-  renderPackages(data); 
-});
