@@ -1,38 +1,41 @@
-// Firebase Web SDK Imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
   getFirestore, 
   collection, 
   addDoc, 
-  getDocs, 
   updateDoc, 
   deleteDoc, 
   doc, 
-  onSnapshot 
+  onSnapshot, 
+  query, 
+  orderBy, 
+  where 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Your Firebase configuration
+// আপনার ফায়ারবেস কনফিগারেশন
 const firebaseConfig = {
-  apiKey: "AIzaSyCTAOFNVhvCBKCa4AsoJmN2KGKRZiPoEH0",
+  apiKey: "AIzaSyDummyKey", 
   authDomain: "sheikh-control-hub.firebaseapp.com",
   projectId: "sheikh-control-hub",
-  storageBucket: "sheikh-control-hub.firebasestorage.app",
-  messagingSenderId: "197517134186",
-  appId: "1:197517134186:web:f36df2b659b5ac61773d13",
-  measurementId: "G-XXS10FLEDG"
+  storageBucket: "sheikh-control-hub.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef"
 };
 
-// Initialize Firebase & Firestore
+// ইনিশিয়ালাইজেশন
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// সবকিছু এক্সপোর্ট
 export { 
   db, 
   collection, 
   addDoc, 
-  getDocs, 
   updateDoc, 
   deleteDoc, 
   doc, 
-  onSnapshot 
+  onSnapshot, 
+  query, 
+  orderBy, 
+  where 
 };
