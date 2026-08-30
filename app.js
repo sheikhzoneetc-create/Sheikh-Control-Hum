@@ -4,192 +4,134 @@ import { listenGmailStock, renderGmailSection } from "./gmail.js";
 import { listenVaultData, listenVideoVault, renderVaultSection, addPasswordItem, addDocumentItem, addVideoToVault, deleteVaultItem, deleteVideoItem } from "./vault.js";
 import { listenReminders, renderReminderSection, startAlarmChecker, addReminder, completeReminder, deleteReminder } from "./reminder.js";
 
-// স্টেট ডাটা
-let localPackages = [];
-let localGmail = [];
-let localVault = [];
-let localVideos = [];
-let localReminders = [];
+// লাইভ ডাটা লোডার
+try {
+  listenPackages((data) => {
+    const root = document.getElementById("packages-root");
+    if (root) renderPackagesSection(root, data);
+  });
+} catch (e) { console.log(e); }
 
-// লাইভ ডাটা লিসেনার সেটআপ
-listenPackages((data) => {
-  localPackages = data;
-  const pkgRoot = document.getElementById("packages-root");
-  if (pkgRoot) renderPackagesSection(pkgRoot, localPackages);
-});
+try {
+  listenGmailStock((data) => {
+    const root = document.getElementById("gmail-root");
+    if (root) renderGmailSection(root, data);
+  });
+} catch (e) { console.log(e); }
 
-listenGmailStock((data) => {
-  localGmail = data;
-  const gmailRoot = document.getElementById("gmail-root");
-  if (gmailRoot) renderGmailSection(gmailRoot, localGmail);
-});
-
-function refreshVaultUI() {
-  const vaultRoot = document.getElementById("vault-root");
-  if (vaultRoot) renderVaultSection(vaultRoot, localVault, localVideos);
+let vVault = [], vVideos = [];
+function updateVault() {
+  const root = document.getElementById("vault-root");
+  if (root) renderVaultSection(root, vVault, vVideos);
 }
 
-listenVaultData((data) => {
-  localVault = data;
-  refreshVaultUI();
-});
+try {
+  listenVaultData((data) => { vVault = data; updateVault(); });
+  listenVideoVault((data) => { vVideos = data; updateVault(); });
+} catch (e) { console.log(e); }
 
-listenVideoVault((data) => {
-  localVideos = data;
-  refreshVaultUI();
-});
+try {
+  listenReminders((data) => {
+    const root = document.getElementById("reminder-root");
+    if (root) {
+      renderReminderSection(root, data);
+      startAlarmChecker(data);
+    }
+  });
+} catch (e) { console.log(e); }
 
-listenReminders((data) => {
-  localReminders = data;
-  const remRoot = document.getElementById("reminder-root");
-  if (remRoot) renderReminderSection(remRoot, localReminders);
-});
-
-// ব্যাকগ্রাউন্ড অ্যালার্ম চেকার চালু
-startAlarmChecker(localReminders);
-
-// মেনু ট্যাব সুইচিং লজিক
-window.switchMainTab = function(tabId, btnElement) {
-  document.querySelectorAll(".tab-sec").forEach(sec => sec.classList.remove("active"));
-  document.querySelectorAll(".nav-item").forEach(btn => btn.classList.remove("active"));
-
+// ট্যাব সুইচিং
+window.switchMainTab = function(tabId, btn) {
+  document.querySelectorAll(".tab-sec").forEach(s => s.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
+  
   const target = document.getElementById(tabId);
   if (target) target.classList.add("active");
-  if (btnElement) btnElement.classList.add("active");
+  if (btn) btn.classList.add("active");
 };
 
-// ভল্ট রি-রেন্ডার ট্রিগার
-window.triggerVaultReRender = function() {
-  refreshVaultUI();
-};
-
-// মোডাল খোলা ও বন্ধের ফাংশন
 window.closeAnyModal = function() {
-  const modal = document.getElementById("modal-backdrop");
-  if (modal) modal.style.display = "none";
+  const m = document.getElementById("modal-backdrop");
+  if (m) m.style.display = "none";
 };
 
-// টেক্সট কপি
 window.copyVaultText = function(text) {
   navigator.clipboard.writeText(text);
   alert("📋 কপি করা হয়েছে!");
 };
 
-// ডিলিট ও কমপ্লিট হ্যান্ডলারসমূহ
-window.handleDeleteVaultItem = async function(id) {
-  if (confirm("এই আইটেমটি ডিলিট করতে চান?")) {
-    await deleteVaultItem(id);
-  }
-};
+window.handleDeleteVaultItem = async (id) => { if(confirm("ডিলিট করবেন?")) await deleteVaultItem(id); };
+window.handleDeleteVideoItem = async (id) => { if(confirm("ডিলিট করবেন?")) await deleteVideoItem(id); };
+window.handleCompleteReminder = async (id) => { await completeReminder(id); };
+window.handleDeleteReminder = async (id) => { if(confirm("মুছে ফেলবেন?")) await deleteReminder(id); };
 
-window.handleDeleteVideoItem = async function(id) {
-  if (confirm("ভিডিওটি ডিলিট করতে চান?")) {
-    await deleteVideoItem(id);
-  }
-};
-
-window.handleCompleteReminder = async function(id) {
-  await completeReminder(id);
-};
-
-window.handleDeleteReminder = async function(id) {
-  if (confirm("টাস্কটি মুছে ফেলতে চান?")) {
-    await deleteReminder(id);
-  }
-};
-
-// রিমাইন্ডার পপআপ
 window.openReminderModal = function() {
-  const modal = document.getElementById("modal-backdrop");
-  const title = document.getElementById("modal-title");
-  const body = document.getElementById("modal-body");
-
-  title.innerText = "⏰ নতুন কাজের অ্যালার্ম";
-  body.innerHTML = `
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-      <input type="text" id="remTaskTitle" placeholder="কাজের নাম (যেমন: সিম রিচার্জ)" class="input-field">
-      <input type="datetime-local" id="remTaskTime" class="input-field">
-      <textarea id="remTaskNote" placeholder="দরকারি নোট (ঐচ্ছিক)" class="input-field" rows="2"></textarea>
-      <button class="btn btn-primary" id="btnSaveRem">সংরক্ষণ করুন</button>
+  const m = document.getElementById("modal-backdrop");
+  document.getElementById("modal-title").innerText = "⏰ নতুন রিমাইন্ডার";
+  document.getElementById("modal-body").innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <input type="text" id="rTitle" placeholder="কাজের নাম" class="input-field">
+      <input type="datetime-local" id="rTime" class="input-field">
+      <textarea id="rNote" placeholder="নোট" class="input-field" rows="2"></textarea>
+      <button class="btn btn-primary" id="saveR">সেভ করুন</button>
     </div>
   `;
-
-  modal.style.display = "flex";
-
-  document.getElementById("btnSaveRem").onclick = async () => {
-    const t = document.getElementById("remTaskTitle").value;
-    const time = document.getElementById("remTaskTime").value;
-    const note = document.getElementById("remTaskNote").value;
-
-    if (!t || !time) {
-      alert("কাজের নাম ও সময় দিন!");
-      return;
-    }
-
+  m.style.display = "flex";
+  document.getElementById("saveR").onclick = async () => {
+    const t = document.getElementById("rTitle").value;
+    const time = document.getElementById("rTime").value;
+    const note = document.getElementById("rNote").value;
+    if(!t || !time) { alert("নাম ও সময় দিন"); return; }
     await addReminder(t, time, note);
     window.closeAnyModal();
   };
 };
 
-// ভল্ট পপআপ
 window.openVaultModal = function(type) {
-  const modal = document.getElementById("modal-backdrop");
+  const m = document.getElementById("modal-backdrop");
   const title = document.getElementById("modal-title");
   const body = document.getElementById("modal-body");
+  m.style.display = "flex";
 
-  if (type === 'password') {
-    title.innerText = "🔑 নতুন পাসওয়ার্ড যোগ";
+  if(type === 'password') {
+    title.innerText = "🔑 নতুন পাসওয়ার্ড";
     body.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        <input type="text" id="vTitle" placeholder="অ্যাকাউন্টের নাম (যেমন: cPanel)" class="input-field">
-        <input type="text" id="vUser" placeholder="ইউজারনেম / ইমেইল" class="input-field">
-        <input type="text" id="vSecret" placeholder="পাসওয়ার্ড / পিন" class="input-field">
-        <button class="btn btn-primary" id="btnSaveV">সেভ করুন</button>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input type="text" id="pName" placeholder="অ্যাকাউন্টের নাম" class="input-field">
+        <input type="text" id="pUser" placeholder="ইউজারনেম" class="input-field">
+        <input type="text" id="pPass" placeholder="পাসওয়ার্ড" class="input-field">
+        <button class="btn btn-primary" id="saveP">সেভ করুন</button>
       </div>
     `;
-    modal.style.display = "flex";
-    document.getElementById("btnSaveV").onclick = async () => {
-      await addPasswordItem(
-        document.getElementById("vTitle").value,
-        document.getElementById("vUser").value,
-        document.getElementById("vSecret").value
-      );
+    document.getElementById("saveP").onclick = async () => {
+      await addPasswordItem(document.getElementById("pName").value, document.getElementById("pUser").value, document.getElementById("pPass").value);
       window.closeAnyModal();
     };
-  } else if (type === 'doc') {
-    title.innerText = "📄 নতুন ডকুমেন্ট লিংক";
+  } else if(type === 'doc') {
+    title.innerText = "📄 নতুন ডকুমেন্ট";
     body.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        <input type="text" id="vDocTitle" placeholder="ডকুমেন্টের নাম" class="input-field">
-        <input type="text" id="vDocLink" placeholder="ফাইল বা ড্রাইভ লিংক" class="input-field">
-        <button class="btn btn-primary" id="btnSaveVDoc">সেভ করুন</button>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input type="text" id="dName" placeholder="নাম" class="input-field">
+        <input type="text" id="dLink" placeholder="লিংক" class="input-field">
+        <button class="btn btn-primary" id="saveD">সেভ করুন</button>
       </div>
     `;
-    modal.style.display = "flex";
-    document.getElementById("btnSaveVDoc").onclick = async () => {
-      await addDocumentItem(
-        document.getElementById("vDocTitle").value,
-        document.getElementById("vDocLink").value
-      );
+    document.getElementById("saveD").onclick = async () => {
+      await addDocumentItem(document.getElementById("dName").value, document.getElementById("dLink").value);
       window.closeAnyModal();
     };
-  } else if (type === 'video') {
-    title.innerText = "🎬 নতুন ভিডিও লিংক";
+  } else if(type === 'video') {
+    title.innerText = "🎬 নতুন ভিডিও";
     body.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        <input type="text" id="vVidTitle" placeholder="ভিডিওর নাম" class="input-field">
-        <input type="text" id="vVidCat" placeholder="ক্যাটাগরি (Reels/Quotes)" class="input-field">
-        <input type="text" id="vVidLink" placeholder="টেলিগ্রাম মেসেজ লিংক" class="input-field">
-        <button class="btn btn-primary" id="btnSaveVVid">সেভ করুন</button>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input type="text" id="vName" placeholder="ভিডিওর নাম" class="input-field">
+        <input type="text" id="vCat" placeholder="ক্যাটাগরি" class="input-field">
+        <input type="text" id="vLink" placeholder="টেলিগ্রাম লিংক" class="input-field">
+        <button class="btn btn-primary" id="saveV">সেভ করুন</button>
       </div>
     `;
-    modal.style.display = "flex";
-    document.getElementById("btnSaveVVid").onclick = async () => {
-      await addVideoToVault(
-        document.getElementById("vVidTitle").value,
-        document.getElementById("vVidCat").value,
-        document.getElementById("vVidLink").value
-      );
+    document.getElementById("saveV").onclick = async () => {
+      await addVideoToVault(document.getElementById("vName").value, document.getElementById("vCat").value, document.getElementById("vLink").value);
       window.closeAnyModal();
     };
   }
