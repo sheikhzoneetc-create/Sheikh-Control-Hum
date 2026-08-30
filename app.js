@@ -2,7 +2,6 @@ import { db, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from ".
 
 let localMasters = [];
 let localCustomers = [];
-let localGmail = [];
 
 // ১. গ্লোবাল নেভিগেশন
 window.switchMainTab = function(tabId, btnElement) {
