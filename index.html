@@ -8,37 +8,43 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
   <style>
-    /* Modal Styles */
+    /* Clean Modal Styles */
     .modal {
       display: none;
       position: fixed;
-      z-index: 9999;
+      z-index: 99999;
       left: 0;
       top: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(0,0,0,0.7);
+      background: rgba(0, 0, 0, 0.75);
       align-items: center;
       justify-content: center;
     }
     .modal-content {
-      background: var(--card-bg, #1a2234);
+      background: #1e293b;
       padding: 20px;
       border-radius: 12px;
-      width: 90%;
-      max-width: 400px;
-      border: 1px solid var(--border-color, #2a374f);
-      color: #fff;
-    }
-    .modal-content input, .modal-content select {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      border-radius: 6px;
+      width: 88%;
+      max-width: 380px;
       border: 1px solid #334155;
+      color: #f8fafc;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    .modal-content input {
+      width: 100%;
+      padding: 11px;
+      margin: 6px 0;
+      border-radius: 8px;
+      border: 1px solid #475569;
       background: #0f172a;
       color: #fff;
+      font-size: 14px;
       box-sizing: border-box;
+      outline: none;
+    }
+    .modal-content input:focus {
+      border-color: #38bdf8;
     }
   </style>
 </head>
@@ -48,13 +54,13 @@
   <div style="padding: 12px 16px;">
     <div style="position: relative;">
       <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 12px; color: #64748b;"></i>
-      <input type="text" id="globalSearch" placeholder="নাম, নাম্বার, জিমেইল বা ফাইল খুঁজুন..." 
-             style="width: 100%; padding: 10px 10px 10px 38px; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #fff; box-sizing: border-box;">
+      <input type="text" id="globalSearch" placeholder="নাম, নাম্বার, জিমেইল খুঁজুন..." 
+             style="width: 100%; padding: 10px 10px 10px 38px; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #fff; box-sizing: border-box; outline: none;">
     </div>
   </div>
 
-  <!-- Main Container -->
-  <div style="padding: 0 16px 80px 16px;">
+  <!-- Main Content Container -->
+  <div style="padding: 0 16px 90px 16px;">
     
     <!-- Tab 1: Packages -->
     <div id="tab-packages" class="tab-content">
@@ -70,7 +76,7 @@
       </div>
 
       <div style="display: flex; gap: 10px; margin-bottom: 14px;">
-        <button class="btn btn-primary" onclick="openCustomerModal()" style="flex: 1;">
+        <button id="btnOpenCustomerModal" class="btn btn-primary" style="flex: 1;">
           <i class="fa-solid fa-user-plus"></i> কাস্টমার যোগ করুন
         </button>
       </div>
@@ -80,61 +86,65 @@
 
     <!-- Tab 2: Gmail -->
     <div id="tab-gmail" class="tab-content" style="display: none;">
-      <div style="display: flex; gap: 10px; margin-bottom: 14px;">
-        <button class="btn btn-primary" onclick="openGmailModal()" style="flex: 1;">
-          <i class="fa-solid fa-plus"></i> জিমেইল যোগ করুন
-        </button>
+      <div style="text-align: center; color: #94a3b8; padding: 40px 0;">
+        <i class="fa-solid fa-envelope" style="font-size: 32px; margin-bottom: 10px; color: #38bdf8;"></i>
+        <p>জিমেইল সেকশন সক্রিয় আছে</p>
       </div>
-      <div id="gmailList"></div>
     </div>
 
     <!-- Tab 3: Vault -->
     <div id="tab-vault" class="tab-content" style="display: none;">
-      <div style="display: flex; gap: 10px; margin-bottom: 14px;">
-        <button class="btn btn-primary" onclick="openVaultModal()" style="flex: 1;">
-          <i class="fa-solid fa-shield"></i> ডাটা সেভ করুন
-        </button>
+      <div style="text-align: center; color: #94a3b8; padding: 40px 0;">
+        <i class="fa-solid fa-vault" style="font-size: 32px; margin-bottom: 10px; color: #f59e0b;"></i>
+        <p>ভল্ট সেকশন প্রস্তুত</p>
       </div>
-      <div id="vaultList"></div>
     </div>
 
     <!-- Tab 4: Video -->
     <div id="tab-video" class="tab-content" style="display: none;">
-      <div id="videoCategoryList"></div>
+      <div style="text-align: center; color: #94a3b8; padding: 40px 0;">
+        <i class="fa-solid fa-play" style="font-size: 32px; margin-bottom: 10px; color: #ec4899;"></i>
+        <p>ভিডিও সেকশন প্রস্তুত</p>
+      </div>
     </div>
 
   </div>
 
-  <!-- Bottom Navigation -->
+  <!-- Bottom Navigation (All 4 Buttons Restored) -->
   <div class="bottom-nav">
-    <div class="nav-item active" onclick="switchTab('packages', this)">
+    <div class="nav-item active" data-tab="packages">
       <i class="fa-solid fa-box-archive"></i>
       <span>প্যাকেজ</span>
     </div>
-    <div class="nav-item" onclick="switchTab('gmail', this)">
+    <div class="nav-item" data-tab="gmail">
       <i class="fa-solid fa-envelope"></i>
       <span>জিমেইল</span>
     </div>
-    <div class="nav-item" onclick="switchTab('vault', this)">
+    <div class="nav-item" data-tab="vault">
       <i class="fa-solid fa-vault"></i>
       <span>ভল্ট</span>
     </div>
+    <div class="nav-item" data-tab="video">
+      <i class="fa-solid fa-video"></i>
+      <span>ভিডিও</span>
+    </div>
   </div>
 
-  <!-- Custom Customer Modal -->
+  <!-- Customer Entry Modal Popup -->
   <div id="customerModal" class="modal">
     <div class="modal-content">
-      <h3 style="margin-top:0;">কাস্টমার যোগ করুন</h3>
+      <h3 style="margin-top:0; font-size: 17px; margin-bottom: 12px; color: #38bdf8;">নতুন কাস্টমার যোগ করুন</h3>
       <input type="text" id="custName" placeholder="কাস্টমারের নাম">
       <input type="text" id="custPhone" placeholder="ফোন নাম্বার">
-      <input type="number" id="custDays" placeholder="মেয়াদ কত দিন (যেমন: 15 বা 30)" value="30">
-      <input type="text" id="custGB" placeholder="জিবি (যেমন: 20)">
+      <input type="number" id="custDays" placeholder="মেয়াদ কত দিন? (যেমন: 15 বা 30)" value="30">
+      <input type="text" id="custGB" placeholder="ডাটা / জিবি (যেমন: 20)">
       <input type="text" id="custMin" placeholder="মিনিট (যেমন: 500)">
-      <input type="text" id="custPackName" placeholder="প্যাকেজের নাম">
-      <input type="text" id="custYtMail" placeholder="YouTube মেইল (থাকলে)">
-      <div style="display: flex; gap: 10px; margin-top: 10px;">
-        <button class="btn btn-success" style="flex: 1;" onclick="submitCustomerForm()">সেভ করুন</button>
-        <button class="btn btn-danger" style="flex: 1;" onclick="closeModal('customerModal')">বাতিল</button>
+      <input type="text" id="custPackName" placeholder="প্যাকেজের নাম (যেমন: প্যাক #১)">
+      <input type="text" id="custYtMail" placeholder="YouTube প্রিমিয়াম জিমেইল (ঐচ্ছিক)">
+      
+      <div style="display: flex; gap: 10px; margin-top: 14px;">
+        <button id="btnSubmitCustomer" class="btn btn-success" style="flex: 1;">সেভ করুন</button>
+        <button id="btnCloseCustomerModal" class="btn btn-danger" style="flex: 1;">বাতিল</button>
       </div>
     </div>
   </div>
@@ -142,3 +152,4 @@
   <script type="module" src="app.js"></script>
 </body>
 </html>
+
