@@ -1,4 +1,8 @@
-// ১. গ্লোবাল ট্যাব সুইচিং ফাংশন (সবার উপরে ডিফাইন করা যাতে ক্লিক এরর না আসে)
+import { db, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "./firebase-config.js";
+import { listenPackages, renderPackagesSection } from "./packages.js";
+import { listenGmailStock, renderGmailSection } from "./gmail.js";
+
+// ১. নেভিগেশন ও গ্লোবাল উইন্ডো ফাংশন
 window.switchMainTab = function(tabId, btnElement) {
   document.querySelectorAll(".tab-sec").forEach(sec => sec.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(btn => btn.classList.remove("active"));
@@ -8,190 +12,236 @@ window.switchMainTab = function(tabId, btnElement) {
   if (btnElement) btnElement.classList.add("active");
 };
 
-// ২. গ্লোবাল মোডাল হ্যান্ডলার
 window.closeAnyModal = function() {
   const modal = document.getElementById("modal-backdrop");
   if (modal) modal.style.display = "none";
 };
 
-// ৩. টেক্সট কপি হ্যান্ডলার
 window.copyVaultText = function(text) {
   navigator.clipboard.writeText(text);
   alert("📋 কপি করা হয়েছে!");
 };
 
-// মডিউল ইমপোর্ট
-import { listenPackages, renderPackagesSection } from "./packages.js";
-import { listenGmailStock, renderGmailSection } from "./gmail.js";
-import { listenVaultData, listenVideoVault, renderVaultSection, addPasswordItem, addDocumentItem, addVideoToVault, deleteVaultItem, deleteVideoItem } from "./vault.js";
-import { listenReminders, renderReminderSection, startAlarmChecker, addReminder, completeReminder, deleteReminder } from "./reminder.js";
-
-// লাইভ ডাটা লোডার
+// ২. প্যাকেজ ও জিমেইল লোডার
 try {
   listenPackages((data) => {
     const root = document.getElementById("packages-root");
     if (root) renderPackagesSection(root, data);
   });
-} catch (err) {
-  console.error("Packages error:", err);
-}
+} catch (e) { console.error("Packages load error:", e); }
 
 try {
   listenGmailStock((data) => {
     const root = document.getElementById("gmail-root");
     if (root) renderGmailSection(root, data);
   });
-} catch (err) {
-  console.error("Gmail error:", err);
-}
+} catch (e) { console.error("Gmail load error:", e); }
 
-let currentVault = [];
-let currentVideos = [];
+// ৩. ভল্ট সিস্টেম (পাসওয়ার্ড, ডকুমেন্ট, ভিডিও)
+const vaultCol = collection(db, "vault_items");
+const videoCol = collection(db, "video_vault");
+let vaultData = [];
+let videoData = [];
+let activeVaultSub = "passwords";
 
-function updateVaultView() {
+onSnapshot(vaultCol, (snap) => {
+  vaultData = [];
+  snap.forEach(d => vaultData.push({ id: d.id, ...d.data() }));
+  renderVaultUI();
+});
+
+onSnapshot(videoCol, (snap) => {
+  videoData = [];
+  snap.forEach(d => videoData.push({ id: d.id, ...d.data() }));
+  renderVaultUI();
+});
+
+function renderVaultUI() {
   const root = document.getElementById("vault-root");
-  if (root) renderVaultSection(root, currentVault, currentVideos);
+  if (!root) return;
+
+  const passwords = vaultData.filter(i => i.type === "password");
+  const docs = vaultData.filter(i => i.type === "document");
+
+  root.innerHTML = `
+    <div style="display: flex; gap: 6px; background: #161b22; padding: 6px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #30363d;">
+      <button class="sub-tab-btn ${activeVaultSub === 'passwords' ? 'active-sub' : ''}" onclick="window.setVaultTab('passwords')">
+        🔑 পাসওয়ার্ড (${passwords.length})
+      </button>
+      <button class="sub-tab-btn ${activeVaultSub === 'docs' ? 'active-sub' : ''}" onclick="window.setVaultTab('docs')">
+        📄 ফাইল (${docs.length})
+      </button>
+      <button class="sub-tab-btn ${activeVaultSub === 'videos' ? 'active-sub' : ''}" onclick="window.setVaultTab('videos')">
+        🎬 ভিডিও (${videoData.length})
+      </button>
+    </div>
+    <div>${getVaultBodyHTML(activeVaultSub, passwords, docs, videoData)}</div>
+  `;
 }
 
-try {
-  listenVaultData((data) => {
-    currentVault = data;
-    updateVaultView();
-  });
-  listenVideoVault((data) => {
-    currentVideos = data;
-    updateVaultView();
-  });
-} catch (err) {
-  console.error("Vault error:", err);
+function getVaultBodyHTML(sub, passwords, docs, videos) {
+  if (sub === 'passwords') {
+    return `
+      <button class="btn btn-primary" onclick="window.openVaultModal('password')" style="margin-bottom:12px; width:100%;">+ নতুন পাসওয়ার্ড</button>
+      ${passwords.map(p => `
+        <div class="card">
+          <div class="card-title"><span>🔑 ${p.title}</span><button class="btn btn-sm btn-danger" onclick="window.delVault('${p.id}')">ডিলিট</button></div>
+          <div style="font-size:13px; color:#8b949e;">ইউজার: ${p.username}</div>
+          <div style="display:flex; gap:8px; margin-top:6px;">
+            <input type="password" value="${p.secret}" readonly style="background:#0d1117; color:#58a6ff; border:1px solid #30363d; padding:6px; border-radius:6px; flex:1;">
+            <button class="btn btn-sm btn-copy" onclick="window.copyVaultText('${p.secret}')">📋 কপি</button>
+          </div>
+        </div>
+      `).join('') || '<div style="text-align:center; color:#8b949e; padding:20px;">কোনো পাসওয়ার্ড নেই</div>'}
+    `;
+  }
+  if (sub === 'docs') {
+    return `
+      <button class="btn btn-primary" onclick="window.openVaultModal('doc')" style="margin-bottom:12px; width:100%;">+ নতুন ডকুমেন্ট लिंक</button>
+      ${docs.map(d => `
+        <div class="card">
+          <div class="card-title"><span>📄 ${d.title}</span><button class="btn btn-sm btn-danger" onclick="window.delVault('${d.id}')">ডিলিট</button></div>
+          <a href="${d.docLink}" target="_blank" style="color:#58a6ff; font-size:13px; margin-top:6px; display:block;">🔗 ফাইল খুলুন</a>
+        </div>
+      `).join('') || '<div style="text-align:center; color:#8b949e; padding:20px;">কোনো ডকুমেন্ট নেই</div>'}
+    `;
+  }
+  if (sub === 'videos') {
+    return `
+      <button class="btn btn-primary" onclick="window.openVaultModal('video')" style="margin-bottom:12px; width:100%;">+ নতুন ভিডিও লিংক</button>
+      ${videos.map(v => `
+        <div class="card">
+          <div class="card-title"><span>🎬 ${v.title}</span><span class="badge badge-active">${v.category}</span></div>
+          <div style="display:flex; justify-content:space-between; margin-top:8px;">
+            <a href="${v.videoLink}" target="_blank" class="btn btn-sm btn-copy" style="text-decoration:none;">▶️ টেলিগ্রামে দেখুন</a>
+            <button class="btn btn-sm btn-danger" onclick="window.delVideo('${v.id}')">ডিলিট</button>
+          </div>
+        </div>
+      `).join('') || '<div style="text-align:center; color:#8b949e; padding:20px;">কোনো ভিডিও নেই</div>'}
+    `;
+  }
 }
 
-try {
-  listenReminders((data) => {
-    const root = document.getElementById("reminder-root");
-    if (root) {
-      renderReminderSection(root, data);
-      startAlarmChecker(data);
+window.setVaultTab = function(t) { activeVaultSub = t; renderVaultUI(); };
+window.delVault = async (id) => { if (confirm("মুছে ফেলবেন?")) await deleteDoc(doc(db, "vault_items", id)); };
+window.delVideo = async (id) => { if (confirm("মুছে ফেলবেন?")) await deleteDoc(doc(db, "video_vault", id)); };
+
+// ৪. রিমাইন্ডার ও অ্যালার্ম সিস্টেম
+const remCol = collection(db, "reminders");
+let reminderData = [];
+const alarmSound = new Audio("https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg");
+
+onSnapshot(remCol, (snap) => {
+  reminderData = [];
+  snap.forEach(d => reminderData.push({ id: d.id, ...d.data() }));
+  renderReminderUI();
+});
+
+function renderReminderUI() {
+  const root = document.getElementById("reminder-root");
+  if (!root) return;
+
+  const pending = reminderData.filter(r => r.status === "pending");
+  const done = reminderData.filter(r => r.status === "completed");
+
+  root.innerHTML = `
+    <button class="btn btn-primary" onclick="window.openReminderModal()" style="margin-bottom:15px; width:100%;">⏰ নতুন অ্যালার্ম যোগ করুন</button>
+    <h4 style="color:#e2e8f0; margin-bottom:8px; font-size:14px;">⏳ বাকি কাজ (${pending.length})</h4>
+    ${pending.map(r => `
+      <div class="card" style="border-left: 4px solid #f59e0b;">
+        <div class="card-title"><span>${r.title}</span><span class="badge badge-pending">${new Date(r.targetDateTime).toLocaleTimeString('bn-BD', {hour:'2-digit', minute:'2-digit'})}</span></div>
+        ${r.note ? `<div style="font-size:13px; color:#8b949e;">নোট: ${r.note}</div>` : ''}
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn btn-sm btn-success" onclick="window.doneReminder('${r.id}')">✅ Done</button>
+          <button class="btn btn-sm btn-danger" onclick="window.delReminder('${r.id}')">মুছে ফেলুন</button>
+        </div>
+      </div>
+    `).join('') || '<div style="text-align:center; color:#8b949e; padding:15px;">কোনো কাজ বাকি নেই</div>'}
+  `;
+}
+
+window.doneReminder = async (id) => await updateDoc(doc(db, "reminders", id), { status: "completed" });
+window.delReminder = async (id) => { if (confirm("মুছবেন?")) await deleteDoc(doc(db, "reminders", id)); };
+
+setInterval(() => {
+  const now = new Date();
+  reminderData.forEach(r => {
+    if (r.status === "pending" && !r.notified && now >= new Date(r.targetDateTime)) {
+      alarmSound.play().catch(() => {});
+      alert(`⏰ অ্যালার্ম: ${r.title}`);
+      updateDoc(doc(db, "reminders", r.id), { notified: true });
     }
   });
-} catch (err) {
-  console.error("Reminder error:", err);
-}
+}, 30000);
 
-// ৪. অ্যাকশন হ্যান্ডলারসমূহ
-window.handleDeleteVaultItem = async function(id) {
-  if (confirm("এই আইটেমটি ডিলিট করতে চান?")) {
-    await deleteVaultItem(id);
-  }
-};
-
-window.handleDeleteVideoItem = async function(id) {
-  if (confirm("ভিডিওটি ডিলিট করতে চান?")) {
-    await deleteVideoItem(id);
-  }
-};
-
-window.handleCompleteReminder = async function(id) {
-  await completeReminder(id);
-};
-
-window.handleDeleteReminder = async function(id) {
-  if (confirm("টাস্কটি মুছে ফেলতে চান?")) {
-    await deleteReminder(id);
-  }
-};
-
-// ৫. পপআপ উইন্ডো কন্ট্রোলার
+// ৫. পপআপ মোডাল লজিক
 window.openReminderModal = function() {
-  const modal = document.getElementById("modal-backdrop");
-  const title = document.getElementById("modal-title");
-  const body = document.getElementById("modal-body");
-
-  title.innerText = "⏰ নতুন কাজের অ্যালার্ম";
-  body.innerHTML = `
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-      <input type="text" id="remTaskTitle" placeholder="কাজের নাম (যেমন: সিম রিচার্জ)" class="input-field">
-      <input type="datetime-local" id="remTaskTime" class="input-field">
-      <textarea id="remTaskNote" placeholder="দরকারি নোট (ঐচ্ছিক)" class="input-field" rows="2"></textarea>
-      <button class="btn btn-primary" id="btnSaveRem">সংরক্ষণ করুন</button>
+  const m = document.getElementById("modal-backdrop");
+  document.getElementById("modal-title").innerText = "⏰ নতুন অ্যালার্ম";
+  document.getElementById("modal-body").innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <input type="text" id="rT" placeholder="কাজের নাম" class="input-field">
+      <input type="datetime-local" id="rTm" class="input-field">
+      <textarea id="rN" placeholder="নোট (ঐচ্ছিক)" class="input-field" rows="2"></textarea>
+      <button class="btn btn-primary" id="saveRBtn">সেভ করুন</button>
     </div>
   `;
-
-  modal.style.display = "flex";
-
-  document.getElementById("btnSaveRem").onclick = async () => {
-    const t = document.getElementById("remTaskTitle").value;
-    const time = document.getElementById("remTaskTime").value;
-    const note = document.getElementById("remTaskNote").value;
-
-    if (!t || !time) {
-      alert("কাজের নাম ও সময় দিন!");
-      return;
-    }
-
-    await addReminder(t, time, note);
+  m.style.display = "flex";
+  document.getElementById("saveRBtn").onclick = async () => {
+    const t = document.getElementById("rT").value;
+    const tm = document.getElementById("rTm").value;
+    const n = document.getElementById("rN").value;
+    if (!t || !tm) return alert("নাম ও সময় দিন");
+    await addDoc(remCol, { title: t, targetDateTime: tm, note: n, status: "pending", notified: false });
     window.closeAnyModal();
   };
 };
 
 window.openVaultModal = function(type) {
-  const modal = document.getElementById("modal-backdrop");
+  const m = document.getElementById("modal-backdrop");
   const title = document.getElementById("modal-title");
   const body = document.getElementById("modal-body");
+  m.style.display = "flex";
 
-  if (type === "password") {
-    title.innerText = "🔑 নতুন পাসওয়ার্ড যোগ";
+  if (type === 'password') {
+    title.innerText = "🔑 নতুন পাসওয়ার্ড";
     body.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        <input type="text" id="vTitle" placeholder="অ্যাকাউন্টের নাম" class="input-field">
-        <input type="text" id="vUser" placeholder="ইউজারনেম / ইমেইল" class="input-field">
-        <input type="text" id="vSecret" placeholder="পাসওয়ার্ড / পিন" class="input-field">
-        <button class="btn btn-primary" id="btnSaveV">সেভ করুন</button>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input type="text" id="vpT" placeholder="অ্যাকাউন্টের নাম" class="input-field">
+        <input type="text" id="vpU" placeholder="ইউজারনেম / ইমেইল" class="input-field">
+        <input type="text" id="vpP" placeholder="পাসওয়ার্ড" class="input-field">
+        <button class="btn btn-primary" id="saveVp">সেভ করুন</button>
       </div>
     `;
-    modal.style.display = "flex";
-    document.getElementById("btnSaveV").onclick = async () => {
-      await addPasswordItem(
-        document.getElementById("vTitle").value,
-        document.getElementById("vUser").value,
-        document.getElementById("vSecret").value
-      );
+    document.getElementById("saveVp").onclick = async () => {
+      await addDoc(vaultCol, { type: "password", title: document.getElementById("vpT").value, username: document.getElementById("vpU").value, secret: document.getElementById("vpP").value });
       window.closeAnyModal();
     };
-  } else if (type === "doc") {
-    title.innerText = "📄 নতুন ডকুমেন্ট লিংক";
+  } else if (type === 'doc') {
+    title.innerText = "📄 নতুন ডকুমেন্ট";
     body.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        <input type="text" id="vDocTitle" placeholder="ডকুমেন্টের নাম" class="input-field">
-        <input type="text" id="vDocLink" placeholder="ফাইল বা ড্রাইভ লিংক" class="input-field">
-        <button class="btn btn-primary" id="btnSaveVDoc">সেভ করুন</button>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input type="text" id="vdT" placeholder="ফাইলের নাম" class="input-field">
+        <input type="text" id="vdL" placeholder="ফাইল লিংক" class="input-field">
+        <button class="btn btn-primary" id="saveVd">সেভ করুন</button>
       </div>
     `;
-    modal.style.display = "flex";
-    document.getElementById("btnSaveVDoc").onclick = async () => {
-      await addDocumentItem(
-        document.getElementById("vDocTitle").value,
-        document.getElementById("vDocLink").value
-      );
+    document.getElementById("saveVd").onclick = async () => {
+      await addDoc(vaultCol, { type: "document", title: document.getElementById("vdT").value, docLink: document.getElementById("vdL").value });
       window.closeAnyModal();
     };
-  } else if (type === "video") {
-    title.innerText = "🎬 নতুন ভিডিও লিংক";
+  } else if (type === 'video') {
+    title.innerText = "🎬 নতুন ভিডিও";
     body.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        <input type="text" id="vVidTitle" placeholder="ভিডিওর নাম" class="input-field">
-        <input type="text" id="vVidCat" placeholder="ক্যাটাগরি" class="input-field">
-        <input type="text" id="vVidLink" placeholder="টেলিগ্রাম মেসেজ লিংক" class="input-field">
-        <button class="btn btn-primary" id="btnSaveVVid">সেভ করুন</button>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input type="text" id="vvT" placeholder="ভিডিওর নাম" class="input-field">
+        <input type="text" id="vvC" placeholder="ক্যাটাগরি" class="input-field">
+        <input type="text" id="vvL" placeholder="টেলিগ্রাম লিংক" class="input-field">
+        <button class="btn btn-primary" id="saveVv">সেভ করুন</button>
       </div>
     `;
-    modal.style.display = "flex";
-    document.getElementById("btnSaveVVid").onclick = async () => {
-      await addVideoToVault(
-        document.getElementById("vVidTitle").value,
-        document.getElementById("vVidCat").value,
-        document.getElementById("vVidLink").value
-      );
+    document.getElementById("saveVv").onclick = async () => {
+      await addDoc(videoCol, { title: document.getElementById("vvT").value, category: document.getElementById("vvC").value, videoLink: document.getElementById("vvL").value });
       window.closeAnyModal();
     };
   }
