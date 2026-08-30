@@ -438,7 +438,73 @@ window.openRenewCustomerModal = function(customerId) {
     document.getElementById("renYtFreshBox").style.display = (e.target.value === "change") ? "block" : "none";
   };
 
-  document.getElementById("
+    document.getElementById("saveRenewBtn").onclick = async () => {
+    const gb = document.getElementById("renGb").value || "0";
+    const min = document.getElementById("renMin").value || "0";
+    const sms = document.getElementById("renSms").value || "0";
+    const price = document.getElementById("renPrice").value || "0";
+    const exp = document.getElementById("renExpDate").value;
+    const ytAction = document.getElementById("renYtAction").value;
+
+    let finalYtEmail = cust.ytEmail || "";
+    let finalYtPass = cust.ytPass || "";
+
+    if (ytAction === "remove") {
+      finalYtEmail = ""; finalYtPass = "";
+    } else if (ytAction === "change") {
+      const sel = document.getElementById("renYtFreshSelect");
+      finalYtEmail = sel.value;
+      const opt = sel.options[sel.selectedIndex];
+      const gId = opt ? opt.getAttribute("data-id") : null;
+      finalYtPass = opt ? opt.getAttribute("data-pass") : "";
+      if (gId) await updateDoc(doc(db, "gmail_stocks", gId), { status: "sold" });
+    }
+
+    await updateDoc(doc(db, "family_customers", customerId), {
+      dataGb: gb.trim(), minutes: min.trim(), sms: sms.trim(),
+      price: price.trim(), expiryDate: exp, ytEmail: finalYtEmail, ytPass: finalYtPass
+    });
+
+    alert("✅ কাস্টমার প্যাকেজ সফলভাবে রিনিউ করা হয়েছে!");
+    window.closeAnyModal();
+  };
+};
+
+window.delCustomer = async function(id) {
+  if (confirm("এই কাস্টমার ডাটা মুছে ফেলতে চান?")) {
+    await deleteDoc(doc(db, "family_customers", id));
+  }
+};
+
+window.sendWhatsAppInvoice = function(customerId) {
+  const c = localCustomers.find(item => item.id === customerId);
+  if (!c) return;
+
+  const master = localMasters.find(m => m.id === c.masterId);
+  const operatorName = master ? master.operator : "স্পেশাল";
+
+  let cleanPhone = c.phone.replace(/[^0-9]/g, '');
+  if (cleanPhone.startsWith('0')) cleanPhone = '88' + cleanPhone;
+
+  let text = `প্রিয় *${c.name}*,\nআপনার *${operatorName}* প্যাকেজটি সফলভাবে চালু করা হয়েছে! ✅\n\n`;
+  text += `🌐 *ডাটা:* ${c.dataGb || 0} GB\n`;
+  text += `📞 *মিনিট:* ${c.minutes || 0} Min\n`;
+  if (c.sms && c.sms !== "0") text += `✉️ *SMS:* ${c.sms}\n`;
+  if (c.price && c.price !== "0") text += `💰 *মূল্য:* ৳${c.price}\n`;
+  text += `⏳ *মেয়াদ:* ${c.expiryDate || '৩০ দিন'} পর্যন্ত\n`;
+
+  if (c.ytEmail) {
+    text += `\n▶️ *YouTube Premium Account:*\n`;
+    text += `✉️ *ইমেইল:* ${c.ytEmail}\n`;
+    text += `🔑 *পাসওয়ার্ড:* ${c.ytPass || 'সেট করা আছে'}\n`;
+  }
+
+  text += `\nশেখ জোনে থাকার জন্য ধন্যবাদ! 🌸`;
+
+  const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
+};
+
 // ==========================================
 // ৩. জিমেইল মডিউল (Gmail Logic)
 // ==========================================
