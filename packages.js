@@ -1,88 +1,58 @@
-import { db, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "./firebase-config.js";
+import { db, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "./firebase-config.js";
 
-// কাস্টমার প্যাকেজ রিয়েলটাইম লিসেনার
-export function listenPackagesData(callback) {
-  const q = query(collection(db, "packages"), orderBy("createdAt", "desc"));
-  return onSnapshot(q, (snapshot) => {
+const pkgCol = collection(db, "package_records");
+
+// লাইভ ডাটা লিসেনার
+export function listenPackages(callback) {
+  return onSnapshot(pkgCol, (snapshot) => {
     const list = [];
-    snapshot.forEach((docSnap) => {
-      list.push({ id: docSnap.id, ...docSnap.data() });
-    });
+    snapshot.forEach((d) => list.push({ id: d.id, ...d.data() }));
     callback(list);
   });
 }
 
-// ফ্যামিলি প্যাক রিয়েলটাইম লিসেনার
-export function listenFamilyPacks(callback) {
-  return onSnapshot(collection(db, "family_packs"), (snapshot) => {
-    const packs = [];
-    snapshot.forEach((docSnap) => {
-      packs.push({ id: docSnap.id, ...docSnap.data() });
-    });
-    callback(packs);
-  });
-}
+// প্যাকেজ স্ক্রিনের মূল ডিজাইন ও রেন্ডারার
+export function renderPackagesSection(containerElement, packages = []) {
+  if (!containerElement) return;
 
-// কাস্টমার স্লট অ্যাসাইন ও সেভ করা (ম্যানুয়াল দিন সাপোর্ট সহ)
-export async function assignCustomerToSlot({ name, phone, durationDays = 30, assignedPacks = [], hasYoutube = false, youtubeGmail = "" }) {
-  const joinDate = new Date().toISOString().split("T")[0];
-  
-  // ম্যানুয়ালি দেওয়া দিন যোগ করা
-  const expDateObj = new Date();
-  expDateObj.setDate(expDateObj.getDate() + Number(durationDays));
-  const expiryDate = expDateObj.toISOString().split("T")[0];
+  const totalActive = packages.filter(p => p.status === "active").length;
+  const freeSlots = packages.reduce((acc, curr) => acc + (4 - (curr.slots?.length || 0)), 0);
 
-  return await addDoc(collection(db, "packages"), {
-    name,
-    phone,
-    durationDays: Number(durationDays),
-    assignedPacks,
-    hasYoutube,
-    youtubeGmail,
-    joinDate,
-    expiryDate,
-    renewCount: 0,
-    createdAt: Date.now()
-  });
-}
+  containerElement.innerHTML = `
+    <!-- সার্চ বার -->
+    <div style="margin-bottom: 12px;">
+      <input type="text" id="pkgSearchInput" placeholder="🔍 নাম বা নাম্বার খুঁজুন..." class="input-field" style="width: 100%;">
+    </div>
 
-// কাস্টমার ডিলিট করার ফাংশন
-export async function deleteCustomer(customerDocId) {
-  return await deleteDoc(doc(db, "packages", customerDocId));
-}
+    <!-- টপ স্ট্যাটাস কার্ড -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+      <div class="card" style="margin: 0; padding: 12px; background: #131b2e;">
+        <span style="font-size: 12px; color: #94a3b8;">সক্রিয় কাস্টমার</span>
+        <div style="font-size: 22px; font-weight: bold; color: #38bdf8;">${totalActive} জন</div>
+      </div>
+      <div class="card" style="margin: 0; padding: 12px; background: #131b2e;">
+        <span style="font-size: 12px; color: #94a3b8;">ফাঁকা ফ্যামিলি স্লট</span>
+        <div style="font-size: 22px; font-weight: bold; color: #10b981;">${freeSlots} টি</div>
+      </div>
+    </div>
 
-// রিনিউ ফাংশন (কাস্টম দিনে রিনিউ)
-export async function renewCustomer(customerDocId, daysToAdd = 30, currentRenewCount = 0) {
-  const expDateObj = new Date();
-  expDateObj.setDate(expDateObj.getDate() + Number(daysToAdd));
-  const expiryDate = expDateObj.toISOString().split("T")[0];
+    <!-- কাস্টমার যোগ বাটন -->
+    <button class="btn btn-primary" onclick="window.openCustomerModal()" style="margin-bottom: 15px; width: 100%; background: #2563eb; color: #fff;">
+      + কাস্টমার যোগ করুন
+    </button>
 
-  const docRef = doc(db, "packages", customerDocId);
-  return await updateDoc(docRef, {
-    expiryDate: expiryDate,
-    durationDays: Number(daysToAdd),
-    renewCount: currentRenewCount + 1
-  });
-}
-
-// বাকি দিন হিসাব করার ফাংশন
-export function getRemainingDays(expiryDateStr) {
-  if (!expiryDateStr) return 0;
-  const target = new Date(expiryDateStr);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diffTime = target - today;
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-}
-
-// নতুন ফ্যামিলি প্যাক তৈরি
-export async function createFamilyPack(masterNumber, packName, totalGB, totalMin, cost) {
-  return await addDoc(collection(db, "family_packs"), {
-    masterNumber,
-    packName,
-    totalGB: Number(totalGB),
-    totalMin: Number(totalMin),
-    cost: Number(cost),
-    createdAt: Date.now()
-  });
+    <!-- কাস্টমার লিস্ট কন্টেইনার -->
+    <div id="customerCardsContainer">
+      ${packages.map(pkg => `
+        <div class="card" style="margin-bottom: 10px; background: #161b22; border: 1px solid #30363d;">
+          <div class="card-title">
+            <span style="color: #fff; font-weight: bold;">${pkg.customerName || 'কাস্টমার'}</span>
+            <span class="badge ${pkg.status === 'active' ? 'badge-active' : 'badge-expired'}">${pkg.status || 'Active'}</span>
+          </div>
+          <div style="font-size: 13px; color: #94a3b8; margin: 4px 0;">📱 নাম্বার: ${pkg.phone || 'N/A'}</div>
+          <div style="font-size: 13px; color: #38bdf8;">📦 প্যাক: ${pkg.packDetails || 'ফ্যামিলি প্যাক'}</div>
+        </div>
+      `).join('') || `<div style="text-align:center; color:#64748b; padding:30px;">কোনো কাস্টমার ডাটা পাওয়া যায়নি</div>`}
+    </div>
+  `;
 }
