@@ -820,3 +820,4 @@ window.openVaultModal = function(type) {
     };
   }
 };
+renderPackagesUI();
