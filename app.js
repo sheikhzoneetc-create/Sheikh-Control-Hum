@@ -361,22 +361,30 @@ function getDaysLeft(expiryDate) {
   const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
   return days > 0 ? `${days} দিন বাকি` : "মেয়াদ শেষ";
 }
-
 function renderPackagesUI() {
   const root = document.getElementById("packages-root");
   if (!root) return;
 
   const totalRevenue = (localCustomers || []).reduce((sum, c) => sum + (parseFloat(c.price) || 0), 0);
 
-  const filteredCustomers = (localCustomers || []).filter(c => 
-    (c.name && c.name.toLowerCase().includes(custSearchQuery)) || 
-    (c.phone && c.phone.includes(custSearchQuery))
-  );
+  const qCust = (custSearchQuery || "").toLowerCase();
+  const qMaster = (masterSearchQuery || "").toLowerCase();
 
-  const allSimNumbers = [...new Set((localMasters || []).map((m) => m.name))];
+  // সেফ ফিল্টারিং (undefined চেকসহ)
+  const filteredCustomers = (localCustomers || []).filter(c => {
+    const nameMatch = c.name ? String(c.name).toLowerCase().includes(qCust) : false;
+    const phoneMatch = c.phone ? String(c.phone).includes(qCust) : false;
+    return nameMatch || phoneMatch;
+  });
+
+  // ইউনিক মাস্টার সিম নম্বর ফিল্টার
+  const allSimNumbers = [...new Set((localMasters || []).map((m) => m.name).filter(Boolean))];
   const filteredSimNumbers = allSimNumbers.filter((sim) => {
-    const pkgs = localMasters.filter((m) => m.name === sim);
-    return sim.includes(masterSearchQuery) || pkgs.some((p) => p.pkgTitle && p.pkgTitle.toLowerCase().includes(masterSearchQuery));
+    const simStr = String(sim || "");
+    const pkgs = (localMasters || []).filter((m) => m.name === sim);
+    const simMatch = simStr.includes(qMaster);
+    const pkgMatch = pkgs.some((p) => p.pkgTitle && String(p.pkgTitle).toLowerCase().includes(qMaster));
+    return simMatch || pkgMatch;
   });
 
   root.innerHTML = `
@@ -437,6 +445,7 @@ function renderPackagesUI() {
             return `
               <div class="card" style="border-left: 4px solid #1f6feb; margin-bottom: 12px; background: #161b22; padding: 12px; border-radius: 8px;">
                 
+                <!-- মাস্টার সিম হেডার (ক্লিক করলে প্যাকেজ খুলবে) -->
                 <div onclick="window.toggleSimAccordion('${simNumber}')" style="cursor: pointer; display:flex; justify-content:space-between; align-items:center;">
                   <div>
                     <span class="badge" style="background:#e11414; color:#fff;">${opName}</span>
@@ -455,6 +464,7 @@ function renderPackagesUI() {
                   </div>
                 </div>
 
+                <!-- মাস্টার সিম ড্রপডাউন (ভেতরের প্যাকেজসমূহ) -->
                 ${isOpen ? `
                   <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #30363d;">
                     <div style="font-size: 12px; font-weight: bold; color: #58a6ff; margin-bottom: 8px;">
@@ -526,7 +536,7 @@ function renderPackagesUI() {
             return `
               <div class="card" style="border-left: 4px solid #58a6ff; margin-bottom: 12px; background: #161b22; padding: 12px; border-radius: 8px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <b style="font-size: 15px;">${cust.name} <span style="font-size:12px; color:#8b949e;">(${cust.phone})</span></b>
+                  <b style="font-size: 15px;">${cust.name || 'নাম নেই'} <span style="font-size:12px; color:#8b949e;">(${cust.phone || 'নম্বর নেই'})</span></b>
                   <span class="badge" style="background:#238636; color:#fff; font-size:11px;">${getDaysLeft(cust.expiryDate)}</span>
                 </div>
                 <div style="display:flex; gap:6px; flex-wrap:wrap; margin: 8px 0;">
@@ -536,7 +546,7 @@ function renderPackagesUI() {
                   <span class="badge" style="background:#238636; color:#fff;">৳ ${cust.price || 0}</span>
                 </div>
                 <div style="font-size: 12px; color: #8b949e; margin-bottom: 8px;">
-                  📦 প্যাকেজ: <b>${pkg ? `${pkg.pkgTitle} (${pkg.name})` : 'মুছে ফেলা হয়েছে'}</b> | ⌛ মেয়াদ শেষ: ${cust.expiryDate || 'N/A'}
+                  📦 প্যাকেজ: <b>${pkg ? `${pkg.pkgTitle || 'প্যাকেজ'} (${pkg.name || ''})` : 'মুছে ফেলা হয়েছে'}</b> | ⌛ মেয়াদ শেষ: ${cust.expiryDate || 'N/A'}
                 </div>
                 <div style="display:flex; gap:6px;">
                   <button class="btn btn-sm" onclick="window.sendWhatsAppInvoice('${cust.id}')" style="background:#25d366; flex:1; padding:6px; border-radius:4px; color:#fff; border:none; font-weight:bold;">💬 WhatsApp</button>
@@ -550,7 +560,6 @@ function renderPackagesUI() {
     `}
   `;
 }
-
 
 // =================================================================
 // ✉️ ৩. জিমেইল মডিউল (Gmail Logic)
