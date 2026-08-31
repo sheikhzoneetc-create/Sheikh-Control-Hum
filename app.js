@@ -278,8 +278,10 @@ window.deleteCustomer = async function (id) {
     window.showToast("কাস্টমার ডিলিট হয়েছে!");
   }
 };
+// =================================================================
+// 💬 হোয়াটসঅ্যাপ ইনভয়েস
+// =================================================================
 
-// হোয়াটসঅ্যাপ ইনভয়েস
 window.sendWhatsAppInvoice = function (customerId) {
   const c = localCustomers.find((item) => item.id === customerId);
   if (!c) return;
@@ -302,12 +304,39 @@ window.sendWhatsAppInvoice = function (customerId) {
   window.open(url, "_blank");
 };
 
+// =================================================================
+// 👑 মাস্টার সিম ও প্যাকেজ ডিলিট / টগল লজিক
+// =================================================================
+
+let openSimAccordion = null;
+
+window.toggleSimAccordion = function (simNumber) {
+  openSimAccordion = openSimAccordion === simNumber ? null : simNumber;
+  renderPackagesUI();
+};
+
+window.deletePackage = async function (pkgId) {
+  if (confirm("এই প্যাকেজটি ডিলিট করতে চান?")) {
+    await deleteDoc(doc(db, "family_masters", pkgId));
+    window.showToast("প্যাকেজ ডিলিট হয়েছে!");
+  }
+};
+
+window.deleteMasterSim = async function (simNumber) {
+  if (confirm(`সতর্কতা: ${simNumber} সিমের সব প্যাকেজ ও ডাটা ডিলিট করতে চান?`)) {
+    const simPkgs = (localMasters || []).filter((m) => m.name === simNumber);
+    for (const p of simPkgs) {
+      await deleteDoc(doc(db, "family_masters", p.id));
+    }
+    window.showToast(`${simNumber} সিমটি সম্পূর্ণ মুছে ফেলা হয়েছে!`);
+  }
+};
 
 // =================================================================
 // 🖥️ ৩. ইউজার ইন্টারফেস ও সার্চ রেন্ডার (UI & Live Search)
 // =================================================================
 
-let currentPkgSubTab = "customers";
+let currentPkgSubTab = "masters";
 let custSearchQuery = "";
 let masterSearchQuery = "";
 
@@ -344,10 +373,11 @@ function renderPackagesUI() {
     (c.phone && c.phone.includes(custSearchQuery))
   );
 
-  const filteredMasters = (localMasters || []).filter(m => 
-    (m.pkgTitle && m.pkgTitle.toLowerCase().includes(masterSearchQuery)) || 
-    (m.name && m.name.includes(masterSearchQuery))
-  );
+  const allSimNumbers = [...new Set((localMasters || []).map((m) => m.name))];
+  const filteredSimNumbers = allSimNumbers.filter((sim) => {
+    const pkgs = localMasters.filter((m) => m.name === sim);
+    return sim.includes(masterSearchQuery) || pkgs.some((p) => p.pkgTitle && p.pkgTitle.toLowerCase().includes(masterSearchQuery));
+  });
 
   root.innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
@@ -363,22 +393,121 @@ function renderPackagesUI() {
 
     <!-- সাব-ট্যাব সুইচার বাটন -->
     <div style="display: flex; gap: 8px; margin-bottom: 12px; background: #0d1117; padding: 4px; border-radius: 8px;">
+      <button onclick="window.switchPkgSubTab('masters')" 
+        style="flex: 1; padding: 10px; border-radius: 6px; border: none; font-weight: bold; font-size: 13px; cursor: pointer;
+        background: ${currentPkgSubTab === 'masters' ? '#1f6feb' : 'transparent'}; 
+        color: ${currentPkgSubTab === 'masters' ? '#fff' : '#8b949e'};">
+        👑 মাস্টার সিম ও প্যাকেজ (${allSimNumbers.length})
+      </button>
       <button onclick="window.switchPkgSubTab('customers')" 
         style="flex: 1; padding: 10px; border-radius: 6px; border: none; font-weight: bold; font-size: 13px; cursor: pointer;
         background: ${currentPkgSubTab === 'customers' ? '#238636' : 'transparent'}; 
         color: ${currentPkgSubTab === 'customers' ? '#fff' : '#8b949e'};">
         👤 কাস্টমার তালিকা (${(localCustomers || []).length})
       </button>
-      <button onclick="window.switchPkgSubTab('masters')" 
-        style="flex: 1; padding: 10px; border-radius: 6px; border: none; font-weight: bold; font-size: 13px; cursor: pointer;
-        background: ${currentPkgSubTab === 'masters' ? '#1f6feb' : 'transparent'}; 
-        color: ${currentPkgSubTab === 'masters' ? '#fff' : '#8b949e'};">
-        👑 ফ্যামিলি প্যাকেজসমূহ (${(localMasters || []).length})
-      </button>
     </div>
 
-    <!-- কাস্টমার ভিউ -->
-    ${currentPkgSubTab === 'customers' ? `
+    <!-- মাস্টার সিম ও প্যাকেজ ভিউ -->
+    ${currentPkgSubTab === 'masters' ? `
+      <div>
+        <div style="display:flex; gap:8px; margin-bottom: 12px;">
+          <input type="text" placeholder="🔍 মাস্টার সিম বা প্যাকেজ খুঁজুন..." 
+            value="${masterSearchQuery}" 
+            oninput="window.handleMasterSearch(this.value)"
+            class="input-field" style="margin:0; flex:1;" />
+          <button class="btn btn-primary" onclick="window.openAddMasterModal()" style="background: #1f6feb; white-space:nowrap;">
+            + নতুন প্যাকেজ লোড
+          </button>
+        </div>
+
+        <div id="master-sim-container">
+          ${filteredSimNumbers.length === 0 ? '<div style="text-align:center; color:#8b949e; padding:25px;">কোনো মাস্টার সিম ডাটা নেই</div>' : ''}
+          ${filteredSimNumbers.map((simNumber, index) => {
+            const simPkgs = (localMasters || []).filter(m => m.name === simNumber);
+            const opName = simPkgs[0] ? simPkgs[0].operator : 'SIM';
+            
+            const simCusts = (localCustomers || []).filter(c => {
+              const p = simPkgs.find(pkg => pkg.id === c.masterId);
+              return !!p;
+            });
+            const occupiedSimSlots = simCusts.length;
+            const freeSimSlots = 8 - occupiedSimSlots;
+            const isOpen = openSimAccordion === simNumber;
+
+            return `
+              <div class="card" style="border-left: 4px solid #1f6feb; margin-bottom: 12px; background: #161b22; padding: 12px; border-radius: 8px;">
+                
+                <div onclick="window.toggleSimAccordion('${simNumber}')" style="cursor: pointer; display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <span class="badge" style="background:#e11414; color:#fff;">${opName}</span>
+                    <b style="font-size: 15px; margin-left: 4px;">${simNumber}</b>
+                    <div style="font-size: 11px; color: #8b949e; margin-top: 3px;">
+                      📦 মোট প্যাকেজ: ${simPkgs.length}টি
+                    </div>
+                  </div>
+                  <div style="text-align: right;">
+                    <span class="badge" style="background:${freeSimSlots > 0 ? '#238636' : '#da3633'}; color:#fff; font-size:11px;">
+                      স্লট: ${occupiedSimSlots}/8 মেম্বার
+                    </span>
+                    <div style="font-size: 11px; color: ${freeSimSlots > 0 ? '#3fb950' : '#f85149'}; margin-top: 3px;">
+                      ${freeSimSlots > 0 ? `ফাঁকা আছে: ${freeSimSlots}টি` : 'সিম ফুল (Full)'} ${isOpen ? '▲' : '▼'}
+                    </div>
+                  </div>
+                </div>
+
+                ${isOpen ? `
+                  <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #30363d;">
+                    <div style="font-size: 12px; font-weight: bold; color: #58a6ff; margin-bottom: 8px;">
+                      📋 সিমের প্যাকেজ তালিকা (${simPkgs.length}টি):
+                    </div>
+
+                    ${simPkgs.map((pkg, pIdx) => {
+                      const custsUnderPkg = (localCustomers || []).filter(c => c.masterId === pkg.id);
+                      const freePkgSlots = 4 - custsUnderPkg.length;
+                      const usedGb = custsUnderPkg.reduce((s, c) => s + (parseFloat(c.dataGb) || 0), 0);
+                      const usedMin = custsUnderPkg.reduce((s, c) => s + (parseFloat(c.minutes) || 0), 0);
+                      const remGb = (parseFloat(pkg.totalGb) || 0) - usedGb;
+                      const remMin = (parseFloat(pkg.totalMin) || 0) - usedMin;
+
+                      return `
+                        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px; margin-bottom: 8px;">
+                          <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <b style="color: #f0883e; font-size: 13px;">${pkg.pkgTitle || `প্যাকেজ-${pIdx + 1}`}</b>
+                            <span class="badge" style="background:${freePkgSlots > 0 ? '#238636' : '#da3633'}; color:#fff; font-size:10px;">
+                              স্লট: ${freePkgSlots > 0 ? freePkgSlots : 0}/4 খালি
+                            </span>
+                          </div>
+
+                          <div style="display:flex; justify-content:space-between; font-size: 11px; margin: 6px 0;">
+                            <span style="color:#3fb950;">🌐 বাকি: ${remGb.toFixed(1)} GB / ${pkg.totalGb || 0}GB</span>
+                            <span style="color:#58a6ff;">📞 বাকি: ${remMin} Min / ${pkg.totalMin || 0}Min</span>
+                          </div>
+
+                          <div style="display:flex; justify-content:space-between; font-size: 11px; color: #8b949e; margin-bottom: 8px;">
+                            <span>⌛ মেয়াদ শেষ: ${pkg.expiryDate || 'N/A'}</span>
+                            <span style="color:#e3b341; font-weight:bold;">${getDaysLeft(pkg.expiryDate)}</span>
+                          </div>
+
+                          <button onclick="window.deletePackage('${pkg.id}')" style="background:#da3633; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:11px; width:100%; cursor:pointer;">
+                            🗑️ এই প্যাকেজটি মুছুন
+                          </button>
+                        </div>
+                      `;
+                    }).join('')}
+
+                    <button onclick="window.deleteMasterSim('${simNumber}')" style="background: transparent; border: 1px solid #da3633; color: #f85149; padding: 6px; border-radius: 4px; font-size: 11px; width: 100%; margin-top: 6px; cursor: pointer;">
+                      ⚠️ সম্পূর্ণ মাস্টার সিম ডিলিট করুন (${simNumber})
+                    </button>
+                  </div>
+                ` : ''}
+
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    ` : `
+      <!-- কাস্টমার ভিউ -->
       <div>
         <div style="display:flex; gap:8px; margin-bottom: 12px;">
           <input type="text" placeholder="🔍 কাস্টমার নাম বা নম্বর খুঁজুন..." 
@@ -418,80 +547,32 @@ function renderPackagesUI() {
           }).join('')}
         </div>
       </div>
-    ` : `
-      <!-- ফ্যামিলি প্যাকেজ ভিউ -->
-      <div>
-        <div style="display:flex; gap:8px; margin-bottom: 12px;">
-          <input type="text" placeholder="🔍 প্যাকেজ বা সিম খুঁজুন..." 
-            value="${masterSearchQuery}" 
-            oninput="window.handleMasterSearch(this.value)"
-            class="input-field" style="margin:0; flex:1;" />
-          <button class="btn btn-primary" onclick="window.openAddMasterModal()" style="background: #1f6feb; white-space:nowrap;">
-            + নতুন প্যাকেজ লোড
-          </button>
-        </div>
-
-        <div id="master-list-container">
-          ${filteredMasters.length === 0 ? '<div style="text-align:center; color:#8b949e; padding:25px;">কোনো ফ্যামিলি প্যাকেজ নেই</div>' : ''}
-          ${filteredMasters.map((pkg, index) => {
-            const custsUnderPkg = (localCustomers || []).filter(c => c.masterId === pkg.id);
-            const freeSlots = 4 - custsUnderPkg.length;
-            const usedGb = custsUnderPkg.reduce((s, c) => s + (parseFloat(c.dataGb) || 0), 0);
-            const usedMin = custsUnderPkg.reduce((s, c) => s + (parseFloat(c.minutes) || 0), 0);
-            const remGb = (parseFloat(pkg.totalGb) || 0) - usedGb;
-            const remMin = (parseFloat(pkg.totalMin) || 0) - usedMin;
-
-            return `
-              <div class="card" style="border-left: 4px solid #f0883e; margin-bottom: 15px; background: #161b22; padding: 12px; border-radius: 8px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <b><span class="badge" style="background:#e11414; color:#fff;">${pkg.operator || 'SIM'}</span> ${pkg.pkgTitle || `প্যাকেজ-${index + 1}`} (${pkg.name})</b>
-                  <span class="badge" style="background:${freeSlots > 0 ? '#238636' : '#da3633'}; color:#fff; font-size:11px;">
-                    খালি: ${freeSlots > 0 ? freeSlots : 0}/4 স্লট
-                  </span>
-                </div>
-                <div style="background:#0d1117; padding:8px; border-radius:6px; margin: 10px 0; font-size:12px;">
-                  <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                    <span style="color:#3fb950;">🌐 অবশিষ্ট ডাটা: ${remGb.toFixed(1)} GB</span>
-                    <span style="color:#58a6ff;">📞 অবশিষ্ট মিনিট: ${remMin} Min</span>
-                  </div>
-                  <div style="color:#8b949e; font-size:11px;">
-                    মোট প্যাক: ${pkg.totalGb || 0}GB, ${pkg.totalMin || 0}Min | মেম্বার যুক্ত: ${custsUnderPkg.length}/4
-                  </div>
-                </div>
-                <div style="display:flex; justify-content:space-between; font-size: 12px; color: #8b949e; margin-bottom: 10px;">
-                  <span>⌛ এক্সপায়ারি: ${pkg.expiryDate || 'N/A'}</span>
-                  <span style="color:#e3b341; font-weight:bold;">${getDaysLeft(pkg.expiryDate)}</span>
-                </div>
-                <div style="display:flex; gap:6px;">
-                  <button class="btn btn-sm" onclick="window.deleteMaster('${pkg.id}')" style="background:#da3633; width:100%; padding:7px; border-radius:4px; color:#fff; border:none;">প্যাকেজ মুছুন</button>
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
     `}
   `;
 }
 
-// ==========================================
-// ৩. জিমেইল মডিউল (Gmail Logic)
-// ==========================================
+
+// =================================================================
+// ✉️ ৩. জিমেইল মডিউল (Gmail Logic)
+// =================================================================
+
 const gmailCol = collection(db, "gmail_stocks");
 let localGmail = [];
 
 onSnapshot(gmailCol, (snap) => {
   localGmail = [];
-  snap.forEach(d => localGmail.push({ id: d.id, ...d.data() }));
-  renderGmailUI();
+  snap.forEach((d) => localGmail.push({ id: d.id, ...d.data() }));
+  if (typeof renderGmailUI === "function") {
+    renderGmailUI();
+  }
 });
 
 function renderGmailUI() {
   const root = document.getElementById("gmail-root");
   if (!root) return;
 
-  const fresh = localGmail.filter(g => g.status === "fresh");
-  const sold = localGmail.filter(g => g.status === "sold");
+  const fresh = localGmail.filter((g) => g.status === "fresh");
+  const sold = localGmail.filter((g) => g.status === "sold");
 
   root.innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
@@ -509,7 +590,7 @@ function renderGmailUI() {
       + নতুন জিমেইল স্টক যোগ করুন
     </button>
 
-    <h4 style="color:#f0f6fc; margin-bottom:8px; font-size:14px;">✉️ ফ্রেশ জিমেইল স্টক</h4>
+    <h4 style="color:#f0f6fc; margin-bottom: 8px; font-size:14px;">✉️ ফ্রেশ জিমেইল স্টক</h4>
     <div id="freshGmail">
       ${fresh.map(g => `
         <div class="card" style="margin-bottom: 10px;">
@@ -522,7 +603,7 @@ function renderGmailUI() {
             <button class="btn btn-sm btn-copy" onclick="window.copyVaultText('${g.email} | ${g.pass}')">📋 কপি</button>
           </div>
           <div style="display:flex; gap:8px; margin-top:10px;">
-            <button class="btn btn-sm btn-success" onclick="window.markGmailSold('${g.id}')">✔️ বিক্রি মার্ক করুন</button>
+            <button class="btn btn-sm btn-success" onclick="window.markGmailSold('${g.id}')">✓ বিক্রি মার্ক করুন</button>
             <button class="btn btn-sm btn-danger" onclick="window.delGmail('${g.id}')">মুছুন</button>
           </div>
         </div>
