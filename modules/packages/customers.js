@@ -1,3 +1,8 @@
+
+window.deleteCustomer = async function(id) {
+  if(!confirm("⚠️ আপনি কি নিশ্চিতভাবে এটি ডিলিট করতে চান?")) return;
+  return await _realDeleteCustomer(id);
+};
 import { db, collection, addDoc, doc, /* auto-release gmail */
 deleteDoc, updateDoc } from "../../firebase-config.js";
 import { appStore } from "../../store.js";
@@ -80,7 +85,7 @@ export function renderCustomersView() {
           <button onclick="window.openEditCustomerModal('${cust.id}')" style="flex:1; background:#1f6feb; color:#fff; border:none; padding:6px; border-radius:4px; font-size:11px; cursor:pointer;">
             ✏️ এডিট / রিনিউ
           </button>
-          <button onclick="window.deleteCustomer = function(id) {
+          <button onclick="window._realDeleteCustomer = function(id) {
   if(!confirm("⚠️ আপনি কি নিশ্চিতভাবে এই কাস্টমার বা সিম রেকর্ডটি ডিলিট করতে চান?")) return;
   // safe delete
 ('${cust.id}')" style="background:#da3633; color:#fff; border:none; padding:6px 10px; border-radius:4px; font-size:11px; cursor:pointer;">
@@ -399,7 +404,7 @@ window.updateCustomerData = async function(custId) {
   window.closeAnyModal();
 };
 
-window.deleteCustomer = function(id) {
+window._realDeleteCustomer = function(id) {
   if(!confirm("⚠️ আপনি কি নিশ্চিতভাবে এই কাস্টমার বা সিম রেকর্ডটি ডিলিট করতে চান?")) return;
   // safe delete
  = async function (id) {
