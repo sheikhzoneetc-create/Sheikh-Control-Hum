@@ -3,7 +3,6 @@ window.deleteCustomer = async function(id) {
   if(!confirm("⚠️ আপনি কি নিশ্চিতভাবে এটি ডিলিট করতে চান?")) return;
   return await _realDeleteCustomer(id);
 };
-import { db, collection, addDoc, doc, /* auto-release gmail */
 deleteDoc, updateDoc } from "../../firebase-config.js";
 import { appStore } from "../../store.js";
 
