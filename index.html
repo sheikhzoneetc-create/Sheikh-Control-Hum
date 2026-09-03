@@ -2,79 +2,141 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sheikh Control Hub</title>
-  
-  <!-- মোবাইল কনসোল টুল (Eruda DevTools) -->
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>eruda.init();</script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: #0d1117; color: #c9d1d9; padding: 12px; padding-bottom: 75px; }
+    .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px; }
+    .badge { padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+    .input-field { background: #0d1117; border: 1px solid #30363d; color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+    .btn { border: none; padding: 8px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; color: #fff; font-weight: bold; }
+    .btn-primary { background: #1f6feb; }
+    .btn-success { background: #238636; }
+    .btn-danger { background: #da3633; }
+    #modal-container { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; padding: 15px; }
 
-  <link rel="stylesheet" href="style.css">
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #161b22;
+      border-top: 1px solid #30363d;
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0;
+      z-index: 1000;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: transparent;
+      border: none;
+      color: #8b949e;
+      font-size: 13px;
+      cursor: pointer;
+      gap: 4px;
+      flex: 1;
+    }
+    .nav-item.active {
+      color: #58a6ff;
+      font-weight: bold;
+    }
+    .nav-item span.icon {
+      font-size: 20px;
+    }
+  </style>
 </head>
 <body>
 
-  <!-- টপ হেডার -->
-  <header class="top-bar">
-    <h2>Sheikh Control Hub</h2>
-  </header>
-
-  <!-- মূল কন্টেন্ট স্ক্রিনসমূহ -->
-  <main id="app-container" class="main-content">
-    
-    <!-- ১. প্যাকেজ ট্যাব -->
-    <section id="packages-sec" class="tab-sec active">
-      <div id="packages-root"></div>
-    </section>
-
-    <!-- ২. জিমেইল ট্যাব -->
-    <section id="gmail-sec" class="tab-sec">
-      <div id="gmail-root"></div>
-    </section>
-
-    <!-- ৩. ভল্ট ট্যাব -->
-    <section id="vault-sec" class="tab-sec">
-      <div id="vault-root"></div>
-    </section>
-
-    <!-- ৪. রিমাইন্ডার ট্যাব -->
-    <section id="reminder-sec" class="tab-sec">
-      <div id="reminder-root"></div>
-    </section>
-
-  </main>
-
-  <!-- সর্বজনীন পপআপ মোডাল -->
-  <div id="modal-backdrop" class="modal-overlay" style="display: none;">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3 id="modal-title">যোগ করুন</h3>
-        <button class="close-btn" onclick="window.closeAnyModal()">✕</button>
-      </div>
-      <div id="modal-body"></div>
+  <!-- টপ বার ১: প্যাকেজ সেক্টর কাউন্টার -->
+  <div id="stats-pkg-bar" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+    <div class="card" style="text-align: center; border-left: 3px solid #58a6ff; padding: 8px;">
+      <div style="font-size: 11px; color: #8b949e;">📦 মোট প্যাকেজ</div>
+      <b id="stat-total-pkgs" style="font-size: 18px; color: #58a6ff;">0</b>
+    </div>
+    <div class="card" style="text-align: center; border-left: 3px solid #3fb950; padding: 8px;">
+      <div style="font-size: 11px; color: #8b949e;">💰 কালেকশন</div>
+      <b id="stat-total-rev" style="font-size: 18px; color: #3fb950;">0 ৳</b>
     </div>
   </div>
 
-  <!-- বটম মেনুবার -->
-  <nav class="bottom-nav">
-    <button class="nav-item active" onclick="window.switchMainTab('packages-sec', this)">
-      <span class="icon">📦</span>
-      <span class="label">প্যাকেজ</span>
-    </button>
-    <button class="nav-item" onclick="window.switchMainTab('gmail-sec', this)">
-      <span class="icon">✉️</span>
-      <span class="label">জিমেইল</span>
-    </button>
-    <button class="nav-item" onclick="window.switchMainTab('vault-sec', this)">
-      <span class="icon">🗄️</span>
-      <span class="label">ভল্ট</span>
-    </button>
-    <button class="nav-item" onclick="window.switchMainTab('reminder-sec', this)">
-      <span class="icon">⏰</span>
-      <span class="label">রিমাইন্ডার</span>
-    </button>
-  </nav>
+  <!-- টপ বার ২: জিমেইল সেক্টর কাউন্টার (৩টি স্টক কাউন্টার) -->
+  <div id="stats-gmail-bar" style="display: none; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 12px;">
+    <div class="card" style="text-align: center; border-left: 3px solid #238636; padding: 6px;">
+      <div style="font-size: 10px; color: #8b949e;">🟢 ফ্রেশ</div>
+      <b id="stat-fresh" style="font-size: 16px; color: #3fb950;">0</b>
+    </div>
+    <div class="card" style="text-align: center; border-left: 3px solid #f85149; padding: 6px;">
+      <div style="font-size: 10px; color: #8b949e;">▶️ YT রেডি</div>
+      <b id="stat-yt" style="font-size: 16px; color: #f85149;">0</b>
+    </div>
+    <div class="card" style="text-align: center; border-left: 3px solid #1f6feb; padding: 6px;">
+      <div style="font-size: 10px; color: #8b949e;">🛒 ট্রেড স্টক</div>
+      <b id="stat-trade" style="font-size: 16px; color: #58a6ff;">0</b>
+    </div>
+  </div>
 
-  <script type="module" src="app.js"></script>
+  <!-- সেক্টর ১: প্যাকেজ সেক্টর -->
+  <div id="sector-package">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+      <button id="sub-sim-btn" onclick="window.switchPackageSubTab('sims')" class="btn" style="background: #1f6feb;">👑 মাস্টার সিম</button>
+      <button id="sub-cust-btn" onclick="window.switchPackageSubTab('customers')" class="btn" style="background: #21262d;">👤 কাস্টমার তালিকা</button>
+    </div>
+
+    <div id="sim-view-section">
+      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+        <input type="text" placeholder="🔍 সিম বা প্যাক সার্চ..." oninput="window.handleMasterSearch(this.value)" class="input-field" style="flex: 1;" />
+        <button onclick="window.openAddSimModal()" class="btn btn-primary">+ নতুন সিম</button>
+      </div>
+      <div id="master-sim-container"></div>
+    </div>
+
+    <div id="cust-view-section" style="display: none;">
+      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+        <input type="text" placeholder="🔍 কাস্টমার সার্চ..." oninput="window.handleCustomerSearch(this.value)" class="input-field" style="flex: 1;" />
+        <button onclick="window.openAddCustomerModal()" class="btn btn-success">+ কাস্টমার</button>
+      </div>
+      <div id="customer-list-container"></div>
+    </div>
+  </div>
+
+  <!-- সেক্টর ২: জিমেইল সেক্টর (৩টি সাব-ট্যাব) -->
+  <div id="sector-gmail" style="display: none;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 12px;">
+      <button id="tab-btn-fresh" onclick="window.switchGmailTab('fresh')" class="btn" style="background: #238636; font-size: 11px; padding: 8px 4px;">
+        🟢 ফ্রেশ মেইল
+      </button>
+      <button id="tab-btn-yt" onclick="window.switchGmailTab('business_yt')" class="btn" style="background: #21262d; font-size: 11px; padding: 8px 4px;">
+        ▶️ YT প্রিমিয়াম
+      </button>
+      <button id="tab-btn-trade" onclick="window.switchGmailTab('buy_sell')" class="btn" style="background: #21262d; font-size: 11px; padding: 8px 4px;">
+        🛒 ট্রেডিং
+      </button>
+    </div>
+
+    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+      <input type="text" placeholder="🔍 জিমেইল সার্চ..." oninput="window.handleGmailSearch(this.value)" class="input-field" style="flex: 1;" />
+      <button onclick="window.openAddGmailModal()" class="btn btn-success">+ নতুন স্টক</button>
+    </div>
+    <div id="gmail-list-container"></div>
+  </div>
+
+  <!-- নিচের বটম নেভিগেশন বার -->
+  <div class="bottom-nav">
+    <button id="nav-pkg-sector" class="nav-item active" onclick="window.switchMainSector('package')">
+      <span class="icon">📦</span>
+      <span>প্যাকেজ সেক্টর</span>
+    </button>
+    <button id="nav-gmail-sector" class="nav-item" onclick="window.switchMainSector('gmail')">
+      <span class="icon">📧</span>
+      <span>জিমেইল সেক্টর</span>
+    </button>
+  </div>
+
+  <div id="modal-container"></div>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>
