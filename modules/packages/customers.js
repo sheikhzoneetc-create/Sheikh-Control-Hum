@@ -249,7 +249,7 @@ window.saveCustomer = async function () {
   const phone = document.getElementById("custPhone").value.trim();
   if (!name || !phone) return alert("নাম এবং মোবাইল নম্বর দেওয়া বাধ্যতামূলক!");
 
-  const hasFamily = document.getElementById("custHasFamily").checked;
+  const hasFamily = true;
   const masterPkgId = hasFamily ? selectedPkgIdForCustomer : "";
 
   if (hasFamily && !masterPkgId) {
