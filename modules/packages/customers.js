@@ -410,7 +410,7 @@ window._realDeleteCustomer = function(id) {
  = async function (id) {
   if (confirm("এই কাস্টমারকে ডিলিট করতে চান?")) {
     await /* auto-release gmail */
-deleteDoc(doc(db, "customers", id));
+if (!id.toString().includes(sim_)) { deleteDoc(doc(db, "customers", id));
   }
 };
 
