@@ -9,159 +9,97 @@ export function renderCustomersView() {
   if (!container) return;
 
   const q = (customerSearchQuery || "").toLowerCase();
-  const list = (appStore.customers || []).filter(c => {
-    const nameMatch = (c.name || "").toLowerCase().includes(q);
-    const phoneMatch = (c.phone || "").toLowerCase().includes(q);
-    const pkgMatch = (c.pkgTitle || "").toLowerCase().includes(q);
-    return nameMatch || phoneMatch || pkgMatch;
-  });
+  const list = (appStore.customers || []).filter(c => 
+    (c.name || "").toLowerCase().includes(q) || 
+    (c.phone || "").toLowerCase().includes(q) || 
+    (c.pkgTitle || "").toLowerCase().includes(q)
+  );
 
-  if (list.length === 0) {
-    container.innerHTML = `<div style="text-align:center; color:#8b949e; padding:25px;">কোনো কাস্টমার পাওয়া যায়নি</div>`;
+  if (!list.length) {
+    container.innerHTML = `<div style="text-align:center;color:#8b949e;padding:25px;">কোনো কাস্টমার নেই</div>`;
     return;
   }
 
-  container.innerHTML = list.map(cust => {
-    let daysRemainingText = "মেয়াদ আনলিমিটেড";
-    let formattedDate = "";
-    let isExpired = false;
-
-    if (cust.expiryDate) {
-      const exp = new Date(cust.expiryDate);
-      const today = new Date();
-      const diff = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
-      
-      const d = String(exp.getDate()).padStart(2, '0');
-      const m = String(exp.getMonth() + 1).padStart(2, '0');
-      const y = exp.getFullYear();
-      formattedDate = `${d}/${m}/${y}`;
-
-      if (diff < 0) {
-        daysRemainingText = "মেয়াদ শেষ";
-        isExpired = true;
-      } else if (diff === 0) {
-        daysRemainingText = "আজ শেষ";
-      } else {
-        daysRemainingText = `${diff} দিন বাকি`;
-      }
+  container.innerHTML = list.map(c => {
+    let daysTxt = "আনলিমিটেড", dateTxt = "", isExp = false;
+    if (c.expiryDate) {
+      const exp = new Date(c.expiryDate);
+      const diff = Math.ceil((exp - new Date()) / (1000 * 60 * 60 * 24));
+      dateTxt = `${String(exp.getDate()).padStart(2,'0')}/${String(exp.getMonth()+1).padStart(2,'0')}/${exp.getFullYear()}`;
+      if (diff < 0) { daysTxt = "মেয়াদ শেষ"; isExp = true; }
+      else if (diff === 0) { daysTxt = "আজ শেষ"; }
+      else { daysTxt = `${diff} দিন বাকি`; }
     }
 
     return `
-      <div class="card" style="border-left: 4px solid ${isExpired ? '#da3633' : '#238636'}; margin-bottom: 12px; background: #161b22; padding: 12px; border-radius: 8px;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div class="card" style="border-left:4px solid ${isExp ? '#da3633' : '#238636'};margin-bottom:12px;background:#161b22;padding:12px;border-radius:8px;">
+        <div style="display:flex;justify-content:space-between;">
           <div>
-            <b style="font-size: 15px; color: #c9d1d9;">${cust.name}</b>
-            <div style="font-size: 12px; color: #8b949e; margin-top: 2px;">📞 ${cust.phone}</div>
+            <b style="font-size:15px;color:#c9d1d9;">${c.name}</b>
+            <div style="font-size:12px;color:#8b949e;">📞 ${c.phone}</div>
           </div>
           <div style="text-align:right;">
-            <span class="badge" style="background:${isExpired ? '#da3633' : '#238636'}; color:#fff; font-size:11px;">
-              ${daysRemainingText}
-            </span>
-            ${formattedDate ? `<div style="font-size:10px; color:#8b949e; margin-top:3px;">তারিখ: ${formattedDate}</div>` : ''}
+            <span class="badge" style="background:${isExp ? '#da3633' : '#238636'};color:#fff;">${daysTxt}</span>
+            ${dateTxt ? `<div style="font-size:10px;color:#8b949e;margin-top:2px;">${dateTxt}</div>` : ''}
           </div>
         </div>
 
-        <div style="margin: 8px 0; padding: 8px; background: #0d1117; border-radius: 6px; font-size: 12px; line-height: 1.6;">
-          ${cust.masterSim ? `<div>👑 ফ্যামিলি সিম: <b>${cust.masterSim}</b> (${cust.pkgTitle || 'প্যাকেজ'})</div>` : ''}
-          <div style="color:#58a6ff;">📊 কোটা: ${cust.dataGb || 0} GB | ${cust.minutes || 0} Min | ${cust.sms || 0} SMS</div>
-          <div style="color:#3fb950;">💰 মূল্য: ${cust.price ? cust.price + ' ৳' : '0 ৳'}</div>
-          ${cust.hasYoutube ? `
-            <div style="margin-top:4px; padding:4px 6px; background:#21262d; border-radius:4px; color:#f85149; font-size:11px;">
-              ▶️ YouTube: <b>${cust.ytEmail || 'N/A'}</b> | Pass: <b>${cust.ytPassword || 'N/A'}</b>
-            </div>
-          ` : ''}
+        <div style="margin:8px 0;padding:8px;background:#0d1117;border-radius:6px;font-size:12px;line-height:1.6;">
+          ${c.masterSim ? `<div>👑 সিম: <b>${c.masterSim}</b> (${c.pkgTitle || 'প্যাক'})</div>` : ''}
+          <div style="color:#58a6ff;"> কোটা: ${c.dataGb || 0}GB | ${c.minutes || 0}Min | ${c.sms || 0}SMS</div>
+          <div style="color:#3fb950;">💰 মূল্য: ${c.price || 0} ৳</div>
+          ${c.hasYoutube ? `<div style="color:#f85149;margin-top:2px;">▶️ YT: ${c.ytEmail || 'N/A'} | Pass: ${c.ytPassword || 'N/A'}</div>` : ''}
         </div>
 
-        <div style="display:flex; gap:6px;">
-          <button onclick="window.sendWhatsAppInvoice('${cust.id}')" style="flex:2; background:#238636; color:#fff; border:none; padding:6px; border-radius:4px; font-size:11px; cursor:pointer;">
-            💬 WhatsApp
-          </button>
-          <button onclick="window.openEditCustomerModal('${cust.id}')" style="flex:1; background:#1f6feb; color:#fff; border:none; padding:6px; border-radius:4px; font-size:11px; cursor:pointer;">
-            ✏️ এডিট / রিনিউ
-          </button>
-          <button onclick="window.deleteCustomer('${cust.id}')" style="background:#da3633; color:#fff; border:none; padding:6px 10px; border-radius:4px; font-size:11px; cursor:pointer;">
-            🗑️
-          </button>
+        <div style="display:flex;gap:6px;">
+          <button onclick="window.sendWhatsAppInvoice('${c.id}')" style="flex:2;background:#238636;color:#fff;border:none;padding:6px;border-radius:4px;cursor:pointer;">💬 WhatsApp</button>
+          <button onclick="window.openEditCustomerModal('${c.id}')" style="flex:1;background:#1f6feb;color:#fff;border:none;padding:6px;border-radius:4px;cursor:pointer;">✏️ এডিট</button>
+          <button onclick="window.deleteCustomer('${c.id}')" style="background:#da3633;color:#fff;border:none;padding:6px 10px;border-radius:4px;cursor:pointer;">🗑️</button>
         </div>
       </div>
     `;
   }).join('');
 }
 
-window.handleCustomerSearch = function (val) {
-  customerSearchQuery = val;
-  renderCustomersView();
-};
+window.handleCustomerSearch = (val) => { customerSearchQuery = val; renderCustomersView(); };
 
 window.openAddCustomerModal = function () {
   selectedPkgIdForCustomer = "";
   const modal = document.getElementById("modal-container");
   if (!modal) return;
-
-  const allSims = [...new Set((appStore.masterSims || []).map(m => m.name).filter(Boolean))];
-  const ytStocks = appStore.youtubeReadyGmails || [];
+  const sims = [...new Set((appStore.masterSims || []).map(m => m.name).filter(Boolean))];
 
   modal.innerHTML = `
-    <div class="modal-content card" style="background:#161b22; max-width:380px; width:95%; margin:15px auto; padding:16px; border-radius:8px; max-height:85vh; overflow-y:auto;">
-      <h3 style="color:#238636; margin-bottom:10px; font-size:16px;">+ নতুন কাস্টমার অ্যাড</h3>
-      
-      <input type="text" id="custName" placeholder="কাস্টমারের নাম" class="input-field" style="margin-bottom:8px; width:100%;" />
-      <input type="text" id="custPhone" placeholder="মোবাইল নম্বর (017...)" class="input-field" style="margin-bottom:8px; width:100%;" />
+    <div class="modal-content card" style="background:#161b22;max-width:380px;width:95%;margin:20px auto;padding:16px;border-radius:8px;max-height:85vh;overflow-y:auto;">
+      <h3 style="color:#238636;margin-bottom:10px;">+ কাস্টমার অ্যাড</h3>
+      <input type="text" id="custName" placeholder="নাম" class="input-field" style="width:100%;margin-bottom:8px;" />
+      <input type="text" id="custPhone" placeholder="মোবাইল নম্বর" class="input-field" style="width:100%;margin-bottom:8px;" />
 
-      <!-- ফ্যামিলি প্যাক অপশন -->
-      <div style="margin:8px 0; padding:8px; background:#0d1117; border-radius:6px;">
-        <label style="font-size:12px; color:#58a6ff; display:flex; align-items:center; gap:6px; cursor:pointer;">
-          <input type="checkbox" id="custHasFamily" onchange="document.getElementById('familySection').style.display = this.checked ? 'block' : 'none'" />
-          👑 ফ্যামিলি প্যাকেজে যুক্ত করবেন?
+      <div style="background:#0d1117;padding:8px;border-radius:6px;margin-bottom:8px;">
+        <label style="font-size:12px;color:#58a6ff;display:flex;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="custHasFamily" onchange="document.getElementById('familyBox').style.display = this.checked ? 'block' : 'none'" /> 👑 ফ্যামিলি প্যাক?
         </label>
-        
-        <div id="familySection" style="display:none; margin-top:8px;">
-          <label style="font-size:11px; color:#8b949e;">মাস্টার সিম বেছে নিন:</label>
-          <select id="custMasterSimSelect" class="input-field" style="margin-bottom:8px; width:100%;" onchange="window.showSimPackagesCards(this.value)">
+        <div id="familyBox" style="display:none;margin-top:8px;">
+          <select id="custMasterSimSelect" class="input-field" style="width:100%;margin-bottom:8px;" onchange="window.showPkgCards(this.value)">
             <option value="">-- সিম বেছে নিন --</option>
-            ${allSims.map(simNumber => {
-              const pkgs = (appStore.masterSims || []).filter(m => m.name === simNumber);
-              const occupied = (appStore.customers || []).filter(c => pkgs.some(p => p.id === c.masterId)).length;
-              return `<option value="${simNumber}">${simNumber} (প্যাক: ${pkgs.length}টি | খালি: ${8 - occupied}/8)</option>`;
-            }).join('')}
+            ${sims.map(s => `<option value="${s}">${s}</option>`).join('')}
           </select>
-
-          <div id="pkgCardsContainer" style="display:none; margin-bottom:8px;"></div>
-
-          <label style="font-size:11px; color:#8b949e;">কাস্টমারকে কত দিচ্ছেন:</label>
-          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
+          <div id="pkgCardsContainer" style="display:none;margin-bottom:8px;"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
             <input type="number" id="custGb" placeholder="GB" class="input-field" style="width:100%;" />
-            <input type="number" id="custMin" placeholder="মিনিট" class="input-field" style="width:100%;" />
+            <input type="number" id="custMin" placeholder="Min" class="input-field" style="width:100%;" />
             <input type="number" id="custSms" placeholder="SMS" class="input-field" style="width:100%;" />
           </div>
         </div>
       </div>
 
-      <!-- YouTube Premium অপশন -->
-      <div style="margin:8px 0; padding:8px; background:#0d1117; border-radius:6px;">
-        <label style="font-size:12px; color:#f85149; display:flex; align-items:center; gap:6px; cursor:pointer;">
-          <input type="checkbox" id="custHasYoutube" onchange="document.getElementById('ytSection').style.display = this.checked ? 'block' : 'none'" />
-          ▶️ YouTube Premium যুক্ত করবেন?
-        </label>
-        
-        <div id="ytSection" style="display:none; margin-top:8px;">
-          <select id="custYtStockId" class="input-field" style="width:100%; margin-bottom:6px;">
-            <option value="">-- YouTube জিমেইল বেছে নিন --</option>
-            ${ytStocks.map(yt => `
-              <option value="${yt.id}" data-email="${yt.email}" data-pass="${yt.password}">${yt.email}</option>
-            `).join('')}
-          </select>
-          <input type="text" id="custYtNote" placeholder="নোট (ঐচ্ছিক)" class="input-field" style="width:100%;" />
-        </div>
-      </div>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
         <input type="number" id="custPrice" placeholder="মূল্য (৳)" class="input-field" style="width:100%;" />
-        <input type="number" id="custDaysInput" placeholder="মেয়াদ কয়দিন? (যেমন: 30)" class="input-field" style="width:100%;" />
+        <input type="number" id="custDaysInput" placeholder="মেয়াদ কয়দিন? (যেমন 30)" class="input-field" style="width:100%;" />
       </div>
 
-      <div style="display:flex; gap:8px; margin-top:12px;">
-        <button class="btn btn-primary" onclick="window.saveCustomer()" style="flex:1; background:#238636;">সেভ করুন</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="window.saveCustomer()" style="flex:1;background:#238636;">সেভ</button>
         <button class="btn btn-danger" onclick="window.closeAnyModal()" style="flex:1;">বাতিল</button>
       </div>
     </div>
@@ -169,270 +107,135 @@ window.openAddCustomerModal = function () {
   modal.style.display = "block";
 };
 
-window.showSimPackagesCards = function (simNumber, defaultSelectedId = "") {
-  const container = document.getElementById("pkgCardsContainer");
-  if (!container) return;
+window.showPkgCards = function (sim) {
+  const c = document.getElementById("pkgCardsContainer");
+  if (!c) return;
+  selectedPkgIdForCustomer = "";
+  if (!sim) { c.style.display = "none"; return; }
 
-  if (!defaultSelectedId) selectedPkgIdForCustomer = "";
-  if (!simNumber) {
-    container.style.display = "none";
-    container.innerHTML = "";
+  const pkgs = (appStore.masterSims || []).filter(m => m.name === sim && m.pkgTitle !== "বেস সিম");
+  if (!pkgs.length) {
+    c.innerHTML = `<div style="font-size:12px;color:#da3633;">কোনো প্যাকেজ নেই!</div>`;
+    c.style.display = "block";
     return;
   }
 
-  const pkgs = (appStore.masterSims || []).filter(m => m.name === simNumber && m.pkgTitle !== "বেস সিম");
-  
-  if (pkgs.length === 0) {
-    container.innerHTML = `<div style="font-size:12px; color:#da3633; padding:6px;">এই সিমে কোনো প্যাকেজ লোড নেই!</div>`;
-    container.style.display = "block";
-    return;
-  }
-
-  container.innerHTML = `
-    <div style="font-size:11px; color:#58a6ff; margin-bottom:4px;">প্যাকেজের ওপর ট্যাপ করে সিলেক্ট করুন:</div>
-    <div style="display:flex; flex-direction:column; gap:6px;">
-      ${pkgs.map(p => {
-        const custs = (appStore.customers || []).filter(c => c.masterId === p.id);
-        const freeSlots = 4 - custs.length;
-        const usedGb = custs.reduce((s, c) => s + (parseFloat(c.dataGb) || 0), 0);
-        const usedMin = custs.reduce((s, c) => s + (parseFloat(c.minutes) || 0), 0);
-        const remGb = (parseFloat(p.totalGb) || 0) - usedGb;
-        const remMin = (parseFloat(p.totalMin) || 0) - usedMin;
-
-        let expText = "মেয়াদ আনলিমিটেড";
-        if (p.expiryDate) {
-          const diff = Math.ceil((new Date(p.expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
-          expText = diff > 0 ? `${diff} দিন বাকি` : (diff === 0 ? "আজ শেষ" : "মেয়াদ শেষ");
-        }
-
-        return `
-          <div id="pkg-card-${p.id}" onclick="window.selectPkgCard('${p.id}')" style="cursor:pointer; background:#161b22; border:1px solid #30363d; border-radius:6px; padding:8px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <b style="color:#f0883e; font-size:12px;">📦 ${p.pkgTitle}</b>
-              <span class="badge" style="background:${freeSlots > 0 ? '#238636' : '#da3633'}; color:#fff; font-size:10px;">
-                ${freeSlots > 0 ? `খালি: ${freeSlots}/4` : 'ফুল'}
-              </span>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:11px; color:#8b949e; margin-top:4px;">
-              <span>🌐 বাকি: ${remGb.toFixed(1)} GB | 📞 ${remMin} Min</span>
-              <span style="color:#e3b341;">⏳ ${expText}</span>
-            </div>
-          </div>
-        `;
-      }).join('')}
-    </div>
-  `;
-  container.style.display = "block";
-
-  if (defaultSelectedId) {
-    window.selectPkgCard(defaultSelectedId);
-  }
+  c.innerHTML = pkgs.map(p => {
+    const custCount = (appStore.customers || []).filter(cu => cu.masterId === p.id).length;
+    return `
+      <div id="pkg-card-${p.id}" onclick="window.selectCard('${p.id}')" style="cursor:pointer;background:#161b22;border:1px solid #30363d;border-radius:6px;padding:8px;margin-bottom:6px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <b style="color:#f0883e;">📦 ${p.pkgTitle}</b>
+          <span class="badge" style="background:#238636;color:#fff;">খালি: ${4 - custCount}/4</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+  c.style.display = "block";
 };
 
-window.selectPkgCard = function(pkgId) {
-  selectedPkgIdForCustomer = pkgId;
-  const cards = document.querySelectorAll("[id^='pkg-card-']");
-  cards.forEach(c => {
-    c.style.border = "1px solid #30363d";
-    c.style.background = "#161b22";
+window.selectCard = function (id) {
+  selectedPkgIdForCustomer = id;
+  document.querySelectorAll("[id^='pkg-card-']").forEach(el => {
+    el.style.border = "1px solid #30363d";
+    el.style.background = "#161b22";
   });
-
-  const selectedEl = document.getElementById(`pkg-card-${pkgId}`);
-  if (selectedEl) {
-    selectedEl.style.border = "2px solid #238636";
-    selectedEl.style.background = "#1f2d24";
+  const active = document.getElementById(`pkg-card-${id}`);
+  if (active) {
+    active.style.border = "2px solid #238636";
+    active.style.background = "#1f2d24";
   }
 };
 
 window.saveCustomer = async function () {
   const name = document.getElementById("custName").value.trim();
   const phone = document.getElementById("custPhone").value.trim();
-  if (!name || !phone) return alert("নাম এবং মোবাইল নম্বর দেওয়া বাধ্যতামূলক!");
+  if (!name || !phone) return alert("নাম এবং ফোন নম্বর দিন!");
 
   const hasFamily = document.getElementById("custHasFamily").checked;
-  const masterPkgId = hasFamily ? selectedPkgIdForCustomer : "";
+  if (hasFamily && !selectedPkgIdForCustomer) return alert("প্যাকেজ সিলেক্ট করুন!");
 
-  if (hasFamily && !masterPkgId) {
-    return alert("দয়া করে যেকোনো একটি প্যাকেজের ওপর ট্যাপ করে সিলেক্ট করুন!");
-  }
-
-  const pkgObj = (appStore.masterSims || []).find(p => p.id === masterPkgId);
-
-  const hasYoutube = document.getElementById("custHasYoutube").checked;
-  const ytSelect = document.getElementById("custYtStockId");
-  const selectedYtOpt = ytSelect ? ytSelect.options[ytSelect.selectedIndex] : null;
-  
-  const ytStockId = (hasYoutube && selectedYtOpt) ? selectedYtOpt.value : "";
-  const ytEmail = (hasYoutube && selectedYtOpt) ? selectedYtOpt.getAttribute("data-email") : "";
-  const ytPassword = (hasYoutube && selectedYtOpt) ? selectedYtOpt.getAttribute("data-pass") : "";
-  const ytNote = hasYoutube ? document.getElementById("custYtNote").value.trim() : "";
-
+  const pkg = (appStore.masterSims || []).find(p => p.id === selectedPkgIdForCustomer);
   const days = parseInt(document.getElementById("custDaysInput").value) || 30;
-  const expDate = new Date();
-  expDate.setDate(expDate.getDate() + days);
+  const exp = new Date();
+  exp.setDate(exp.getDate() + days);
 
-  const custData = {
-    name,
-    phone,
-    hasFamily,
-    masterId: masterPkgId || "",
-    masterSim: pkgObj ? pkgObj.name : "",
-    pkgTitle: pkgObj ? pkgObj.pkgTitle : "",
+  await addDoc(collection(db, "customers"), {
+    name, phone, hasFamily,
+    masterId: selectedPkgIdForCustomer || "",
+    masterSim: pkg ? pkg.name : "",
+    pkgTitle: pkg ? pkg.pkgTitle : "",
     dataGb: hasFamily ? parseFloat(document.getElementById("custGb").value) || 0 : 0,
     minutes: hasFamily ? parseFloat(document.getElementById("custMin").value) || 0 : 0,
     sms: hasFamily ? parseFloat(document.getElementById("custSms").value) || 0 : 0,
-    hasYoutube,
-    ytEmail,
-    ytPassword,
-    ytNote,
     price: document.getElementById("custPrice").value || 0,
-    expiryDate: expDate.toISOString(),
+    expiryDate: exp.toISOString(),
     createdAt: new Date().toISOString()
-  };
-
-  await addDoc(collection(db, "customers"), custData);
-
-  if (hasYoutube && ytStockId) {
-    await updateDoc(doc(db, "gmail_stocks", ytStockId), {
-      status: "sold",
-      soldTo: name,
-      soldDate: new Date().toISOString()
-    });
-  }
-
+  });
   window.closeAnyModal();
 };
 
-window.openEditCustomerModal = function(custId) {
-  const cust = (appStore.customers || []).find(c => c.id === custId);
-  if (!cust) return;
-
+window.openEditCustomerModal = function(id) {
+  const c = (appStore.customers || []).find(cu => cu.id === id);
+  if (!c) return;
   const modal = document.getElementById("modal-container");
   if (!modal) return;
 
-  const allSims = [...new Set((appStore.masterSims || []).map(m => m.name).filter(Boolean))];
-  selectedPkgIdForCustomer = cust.masterId || "";
-
   modal.innerHTML = `
-    <div class="modal-content card" style="background:#161b22; max-width:380px; width:95%; margin:15px auto; padding:16px; border-radius:8px; max-height:85vh; overflow-y:auto;">
-      <h3 style="color:#1f6feb; margin-bottom:10px; font-size:16px;">✏️ কাস্টমার এডিট / রিনিউ</h3>
-      
-      <input type="text" id="editCustName" value="${cust.name || ''}" placeholder="কাস্টমারের নাম" class="input-field" style="margin-bottom:8px; width:100%;" />
-      <input type="text" id="editCustPhone" value="${cust.phone || ''}" placeholder="মোবাইল নম্বর" class="input-field" style="margin-bottom:8px; width:100%;" />
-
-      <div style="margin:8px 0; padding:8px; background:#0d1117; border-radius:6px;">
-        <label style="font-size:12px; color:#58a6ff; display:flex; align-items:center; gap:6px; cursor:pointer;">
-          <input type="checkbox" id="editCustHasFamily" ${cust.hasFamily ? 'checked' : ''} onchange="document.getElementById('editFamilySection').style.display = this.checked ? 'block' : 'none'" />
-          👑 ফ্যামিলি প্যাকেজ পরিবর্তন করবেন?
-        </label>
-        
-        <div id="editFamilySection" style="display:${cust.hasFamily ? 'block' : 'none'}; margin-top:8px;">
-          <select id="editCustMasterSimSelect" class="input-field" style="margin-bottom:8px; width:100%;" onchange="window.showSimPackagesCards(this.value, '${cust.masterId}')">
-            <option value="">-- সিম বেছে নিন --</option>
-            ${allSims.map(simNumber => `
-              <option value="${simNumber}" ${simNumber === cust.masterSim ? 'selected' : ''}>${simNumber}</option>
-            `).join('')}
-          </select>
-
-          <div id="pkgCardsContainer" style="margin-bottom:8px;"></div>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
-            <input type="number" id="editCustGb" value="${cust.dataGb || 0}" placeholder="GB" class="input-field" style="width:100%;" />
-            <input type="number" id="editCustMin" value="${cust.minutes || 0}" placeholder="মিনিট" class="input-field" style="width:100%;" />
-            <input type="number" id="editCustSms" value="${cust.sms || 0}" placeholder="SMS" class="input-field" style="width:100%;" />
-          </div>
-        </div>
+    <div class="modal-content card" style="background:#161b22;max-width:380px;width:95%;margin:20px auto;padding:16px;border-radius:8px;">
+      <h3 style="color:#1f6feb;margin-bottom:10px;">✏️ এডিট / রিনিউ</h3>
+      <input type="text" id="editName" value="${c.name}" class="input-field" style="width:100%;margin-bottom:8px;" />
+      <input type="text" id="editPhone" value="${c.phone}" class="input-field" style="width:100%;margin-bottom:8px;" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <input type="number" id="editGb" value="${c.dataGb || 0}" placeholder="GB" class="input-field" style="width:100%;" />
+        <input type="number" id="editMin" value="${c.minutes || 0}" placeholder="Min" class="input-field" style="width:100%;" />
       </div>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0;">
-        <input type="number" id="editCustPrice" value="${cust.price || 0}" placeholder="মূল্য (৳)" class="input-field" style="width:100%;" />
-        <input type="number" id="editCustDays" placeholder="নতুন মেয়াদ কয়দিন? (+30)" class="input-field" style="width:100%;" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+        <input type="number" id="editPrice" value="${c.price || 0}" placeholder="মূল্য (৳)" class="input-field" style="width:100%;" />
+        <input type="number" id="editDays" placeholder="নতুন দিন (+30)" class="input-field" style="width:100%;" />
       </div>
-
-      <div style="display:flex; gap:8px; margin-top:12px;">
-        <button class="btn btn-primary" onclick="window.updateCustomerData('${cust.id}')" style="flex:1;">আপডেট করুন</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="window.updateCust('${c.id}')" style="flex:1;">আপডেট</button>
         <button class="btn btn-danger" onclick="window.closeAnyModal()" style="flex:1;">বাতিল</button>
       </div>
     </div>
   `;
   modal.style.display = "block";
-
-  if (cust.hasFamily && cust.masterSim) {
-    window.showSimPackagesCards(cust.masterSim, cust.masterId);
-  }
 };
 
-window.updateCustomerData = async function(custId) {
-  const name = document.getElementById("editCustName").value.trim();
-  const phone = document.getElementById("editCustPhone").value.trim();
-  if (!name || !phone) return alert("নাম এবং ফোন নম্বর দিন!");
-
-  const hasFamily = document.getElementById("editCustHasFamily").checked;
-  const masterPkgId = hasFamily ? selectedPkgIdForCustomer : "";
-  const pkgObj = (appStore.masterSims || []).find(p => p.id === masterPkgId);
-
-  const updateFields = {
-    name,
-    phone,
-    hasFamily,
-    masterId: masterPkgId || "",
-    masterSim: pkgObj ? pkgObj.name : "",
-    pkgTitle: pkgObj ? pkgObj.pkgTitle : "",
-    dataGb: hasFamily ? parseFloat(document.getElementById("editCustGb").value) || 0 : 0,
-    minutes: hasFamily ? parseFloat(document.getElementById("editCustMin").value) || 0 : 0,
-    sms: hasFamily ? parseFloat(document.getElementById("editCustSms").value) || 0 : 0,
-    price: document.getElementById("editCustPrice").value || 0
+window.updateCust = async function(id) {
+  const name = document.getElementById("editName").value.trim();
+  const phone = document.getElementById("editPhone").value.trim();
+  const updateData = {
+    name, phone,
+    dataGb: parseFloat(document.getElementById("editGb").value) || 0,
+    minutes: parseFloat(document.getElementById("editMin").value) || 0,
+    price: document.getElementById("editPrice").value || 0
   };
-
-  const newDays = parseInt(document.getElementById("editCustDays").value);
-  if (!isNaN(newDays) && newDays > 0) {
-    const expDate = new Date();
-    expDate.setDate(expDate.getDate() + newDays);
-    updateFields.expiryDate = expDate.toISOString();
+  const d = parseInt(document.getElementById("editDays").value);
+  if (!isNaN(d) && d > 0) {
+    const exp = new Date();
+    exp.setDate(exp.getDate() + d);
+    updateData.expiryDate = exp.toISOString();
   }
-
-  await updateDoc(doc(db, "customers", custId), updateFields);
+  await updateDoc(doc(db, "customers", id), updateData);
   window.closeAnyModal();
 };
 
-window.deleteCustomer = async function (id) {
-  if (confirm("এই কাস্টমারকে ডিলিট করতে চান?")) {
-    await deleteDoc(doc(db, "customers", id));
-  }
+window.deleteCustomer = async (id) => {
+  if (confirm("কাস্টমার ডিলিট করবেন?")) await deleteDoc(doc(db, "customers", id));
 };
 
-window.sendWhatsAppInvoice = function (custId) {
-  const cust = (appStore.customers || []).find(c => c.id === custId);
-  if (!cust) return;
-
-  let msg = `*--- ইনভয়েস / সার্ভিস ডিটেইলস ---*\n`;
-  msg += `👤 কাস্টমার: ${cust.name}\n`;
-  msg += `📱 ফোন নম্বর: ${cust.phone}\n`;
-
-  if (cust.hasFamily) {
-    msg += `\n*ফ্যামিলি প্যাকেজ ডিটেইলস:*\n`;
-    msg += `👑 মূল সিম: ${cust.masterSim}\n`;
-    msg += `📦 প্যাকেজ: ${cust.pkgTitle || 'সাধারণ'}\n`;
-    msg += `🌐 ইন্টারনেট: ${cust.dataGb} GB\n`;
-    msg += `📞 মিনিট: ${cust.minutes} Min\n`;
-    if (cust.sms) msg += `✉️ SMS: ${cust.sms}\n`;
-  }
-
-  if (cust.hasYoutube) {
-    msg += `\n*YouTube Premium একাউন্ট:*\n`;
-    msg += `📧 ইমেইল: ${cust.ytEmail}\n`;
-    msg += `🔑 পাসওয়ার্ড: ${cust.ytPassword}\n`;
-    if (cust.ytNote) msg += `📝 নোট: ${cust.ytNote}\n`;
-  }
-
-  msg += `\n💰 মোট মূল্য: ${cust.price} ৳\n`;
-  
-  if (cust.expiryDate) {
-    const exp = new Date(cust.expiryDate);
-    const diff = Math.ceil((exp - new Date()) / (1000 * 60 * 60 * 24));
+window.sendWhatsAppInvoice = function(id) {
+  const c = (appStore.customers || []).find(cu => cu.id === id);
+  if (!c) return;
+  let msg = `*ইনভয়েস*\n👤 কাস্টমার: ${c.name}\n📱 ফোন: ${c.phone}\n`;
+  if (c.hasFamily) msg += `👑 সিম: ${c.masterSim}\n🌐 ডাটা: ${c.dataGb} GB\n📞 মিনিট: ${c.minutes} Min\n`;
+  msg += `💰 মূল্য: ${c.price} ৳\n`;
+  if (c.expiryDate) {
+    const diff = Math.ceil((new Date(c.expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
     msg += `📅 মেয়াদ: ${diff > 0 ? diff + ' দিন বাকি' : 'মেয়াদ শেষ'}\n`;
   }
-  const cleanPhone = cust.phone.replace(/[^0-9]/g, '');
-  const finalPhone = cleanPhone.startsWith('88') ? cleanPhone : ('88' + cleanPhone);
-  window.open(`https://wa.me/${finalPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+  const cleanPhone = c.phone.replace(/[^0-9]/g, '');
+  window.open(`https://wa.me/${cleanPhone.startsWith('88') ? cleanPhone : '88' + cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
 };
