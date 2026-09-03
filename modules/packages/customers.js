@@ -80,7 +80,10 @@ export function renderCustomersView() {
           <button onclick="window.openEditCustomerModal('${cust.id}')" style="flex:1; background:#1f6feb; color:#fff; border:none; padding:6px; border-radius:4px; font-size:11px; cursor:pointer;">
             ✏️ এডিট / রিনিউ
           </button>
-          <button onclick="window.deleteCustomer('${cust.id}')" style="background:#da3633; color:#fff; border:none; padding:6px 10px; border-radius:4px; font-size:11px; cursor:pointer;">
+          <button onclick="window.deleteCustomer = function(id) {
+  if(!confirm("⚠️ আপনি কি নিশ্চিতভাবে এই কাস্টমার বা সিম রেকর্ডটি ডিলিট করতে চান?")) return;
+  // safe delete
+('${cust.id}')" style="background:#da3633; color:#fff; border:none; padding:6px 10px; border-radius:4px; font-size:11px; cursor:pointer;">
             🗑️
           </button>
         </div>
@@ -396,7 +399,10 @@ window.updateCustomerData = async function(custId) {
   window.closeAnyModal();
 };
 
-window.deleteCustomer = async function (id) {
+window.deleteCustomer = function(id) {
+  if(!confirm("⚠️ আপনি কি নিশ্চিতভাবে এই কাস্টমার বা সিম রেকর্ডটি ডিলিট করতে চান?")) return;
+  // safe delete
+ = async function (id) {
   if (confirm("এই কাস্টমারকে ডিলিট করতে চান?")) {
     await /* auto-release gmail */
 deleteDoc(doc(db, "customers", id));
