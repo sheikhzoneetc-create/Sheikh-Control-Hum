@@ -1,4 +1,5 @@
-import { db, collection, addDoc, doc, deleteDoc, updateDoc } from "../../firebase-config.js";
+import { db, collection, addDoc, doc, /* auto-release gmail */
+deleteDoc, updateDoc } from "../../firebase-config.js";
 import { appStore } from "../../store.js";
 
 let customerSearchQuery = "";
@@ -397,7 +398,8 @@ window.updateCustomerData = async function(custId) {
 
 window.deleteCustomer = async function (id) {
   if (confirm("এই কাস্টমারকে ডিলিট করতে চান?")) {
-    await deleteDoc(doc(db, "customers", id));
+    await /* auto-release gmail */
+deleteDoc(doc(db, "customers", id));
   }
 };
 
