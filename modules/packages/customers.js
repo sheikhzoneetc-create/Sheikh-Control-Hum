@@ -119,7 +119,6 @@ window.openAddCustomerModal = function () {
       <input type="text" id="custName" placeholder="কাস্টমারের নাম" class="input-field" style="margin-bottom:8px; width:100%;" />
       <input type="text" id="custPhone" placeholder="মোবাইল নম্বর (017...)" class="input-field" style="margin-bottom:8px; width:100%;" />
 
-      <!-- ফ্যামিলি প্যাক অপশন -->
       <div style="margin:8px 0; padding:8px; background:#0d1117; border-radius:6px;">
         <label style="font-size:12px; color:#58a6ff; display:flex; align-items:center; gap:6px; cursor:pointer;">
           <input type="checkbox" id="custHasFamily" onchange="document.getElementById('familySection').style.display = this.checked ? 'block' : 'none'" />
@@ -148,7 +147,6 @@ window.openAddCustomerModal = function () {
         </div>
       </div>
 
-      <!-- YouTube Premium অপশন -->
       <div style="margin:8px 0; padding:8px; background:#0d1117; border-radius:6px;">
         <label style="font-size:12px; color:#f85149; display:flex; align-items:center; gap:6px; cursor:pointer;">
           <input type="checkbox" id="custHasYoutube" onchange="document.getElementById('ytSection').style.display = this.checked ? 'block' : 'none'" />
@@ -415,4 +413,201 @@ window.updateCustomerData = async function(custId) {
   if (!isNaN(newDays) && newDays > 0) {
     const expDate = new Date();
     expDate.setDate(expDate.getDate() + newDays);
-    newExpIso = expDate.t
+    newExpIso = expDate.toISOString();
+  }
+const existingHistory = Array.isArray(cust.packageHistory) ? [...cust.packageHistory] : [];
+  
+  if (hasFamily && (masterPkgId !== cust.masterId || newDays > 0)) {
+    existingHistory.unshift({
+      date: new Date().toISOString(),
+      pkgTitle: pkgObj ? pkgObj.pkgTitle : (cust.pkgTitle || "প্যাকেজ"),
+      masterSim: pkgObj ? pkgObj.name : (cust.masterSim || ""),
+      dataGb,
+      minutes,
+      sms,
+      price,
+      expiryDate: newExpIso
+    });
+  }
+
+  const updateFields = {
+    name,
+    phone,
+    hasFamily,
+    masterId: masterPkgId || "",
+    masterSim: pkgObj ? pkgObj.name : (hasFamily ? cust.masterSim : ""),
+    pkgTitle: pkgObj ? pkgObj.pkgTitle : (hasFamily ? cust.pkgTitle : ""),
+    dataGb,
+    minutes,
+    sms,
+    price,
+    expiryDate: newExpIso,
+    packageHistory: existingHistory
+  };
+
+  await updateDoc(doc(db, "customers", custId), updateFields);
+  window.closeAnyModal();
+};
+
+window.clearActivePackage = async function(custId) {
+  if (!confirm("আপনি কি এই কাস্টমারের বর্তমান প্যাকেজ মুছে দিতে চান? (কাস্টমারের মোবাইল নম্বর ও হিস্ট্রি সম্পূর্ণ অক্ষত থাকবে)")) return;
+  
+  await updateDoc(doc(db, "customers", custId), {
+    hasFamily: false,
+    masterId: "",
+    pkgTitle: "",
+    dataGb: 0,
+    minutes: 0,
+    sms: 0,
+    price: 0,
+    expiryDate: ""
+  });
+};
+
+window.openCustomerHistoryModal = function(custId) {
+  const cust = (appStore.customers || []).find(c => c.id === custId);
+  if (!cust) return;
+
+  const modal = document.getElementById("modal-container");
+  if (!modal) return;
+
+  const history = Array.isArray(cust.packageHistory) ? cust.packageHistory : [];
+
+  modal.innerHTML = `
+    <div class="modal-content card" style="background:#161b22; max-width:400px; width:95%; margin:15px auto; padding:16px; border-radius:8px; max-height:85vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="color:#8957e5; margin:0; font-size:16px;">📜 কাস্টমার লাইফটাইম হিস্ট্রি</h3>
+        <button onclick="window.closeAnyModal()" style="background:none; border:none; color:#8b949e; font-size:16px; cursor:pointer;">✕</button>
+      </div>
+
+      <div style="background:#0d1117; padding:8px 10px; border-radius:6px; margin-bottom:12px; font-size:13px;">
+        <div style="color:#c9d1d9;"><b>${cust.name}</b> (📞 ${cust.phone})</div>
+        <div style="color:#8b949e; font-size:11px; margin-top:2px;">সর্বমোট ক্রয়: ${history.length} বার</div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        ${history.length === 0 ? '<div style="color:#8b949e; text-align:center; padding:15px;">পূর্বের কোনো হিস্ট্রি পাওয়া যায়নি</div>' : 
+          history.map((h, i) => {
+            const d = new Date(h.date);
+            const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+            return `
+              <div style="background:#0d1117; border-left:3px solid #8957e5; padding:8px 10px; border-radius:4px; font-size:12px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                  <b style="color:#f0883e;">${h.pkgTitle || 'প্যাকেজ'}</b>
+                  <span style="color:#8b949e; font-size:10px;">${dateStr}</span>
+                </div>
+                <div style="color:#58a6ff;">📊 ${h.dataGb || 0} GB | ${h.minutes || 0} Min | ${h.sms || 0} SMS</div>
+                <div style="display:flex; justify-content:space-between; margin-top:3px;">
+                  <span style="color:#3fb950;">💰 ${h.price || 0} ৳</span>
+                  <span style="color:#8b949e; font-size:11px;">সিম: ${h.masterSim || 'N/A'}</span>
+                </div>
+              </div>
+            `;
+          }).join('')
+        }
+      </div>
+
+      <button class="btn btn-secondary" onclick="window.closeAnyModal()" style="width:100%; margin-top:12px; background:#21262d; border:none; color:#c9d1d9; padding:8px; border-radius:4px; cursor:pointer;">বন্ধ করুন</button>
+    </div>
+  `;
+  modal.style.display = "block";
+};
+
+window.confirmAndDeleteCustomer = function(customerId, customerName, phoneNumber) {
+  if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showConfirm) {
+    window.Telegram.WebApp.showConfirm(
+      `সতর্কতা!\n\nআপনি কি নিশ্চিত যে কাস্টমার:\n"${customerName}" (${phoneNumber})\nসম্পূর্ণ মুছে ফেলতে চান?`,
+      (confirmed) => {
+        if (confirmed) window.executeCustomerDelete(customerId);
+      }
+    );
+  } else {
+    showDeleteModal(customerId, customerName, phoneNumber);
+  }
+};
+
+function showDeleteModal(customerId, customerName, phoneNumber) {
+  const existingModal = document.getElementById('deleteConfirmModal');
+  if (existingModal) existingModal.remove();
+
+  const modalHtml = `
+    <div id="deleteConfirmModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 99999; backdrop-filter: blur(4px);">
+      <div style="background: #161b22; color: #fff; width: 90%; max-width: 340px; padding: 20px; border-radius: 12px; border: 1px solid #da3633; text-align: center;">
+        <div style="font-size: 36px; margin-bottom: 8px;">⚠️</div>
+        <h4 style="margin: 0 0 8px 0; color: #da3633; font-size: 17px;">কাস্টমার ডিলিট সতর্কতা</h4>
+        <p style="font-size: 12px; color: #8b949e; margin-bottom: 12px;">কাস্টমার ও তার সমস্ত হিস্ট্রি ডিলিট হয়ে যাবে।</p>
+        
+        <div style="background: #0d1117; border-radius: 6px; padding: 8px; margin-bottom: 15px;">
+          <div style="font-weight: bold; font-size: 14px; color: #c9d1d9;">${customerName}</div>
+          <div style="font-size: 12px; color: #8b949e; margin-top: 2px;">📞 ${phoneNumber}</div>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: center;">
+          <button id="cancelDeleteBtn" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #21262d; color: #c9d1d9; font-size: 12px; cursor: pointer;">বাতিল</button>
+          <button id="confirmDeleteBtn" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #da3633; color: #fff; font-size: 12px; font-weight: bold; cursor: pointer;">ডিলিট</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+  document.getElementById('cancelDeleteBtn').onclick = () => {
+    document.getElementById('deleteConfirmModal').remove();
+  };
+
+  document.getElementById('confirmDeleteBtn').onclick = () => {
+    document.getElementById('deleteConfirmModal').remove();
+    window.executeCustomerDelete(customerId);
+  };
+}
+
+window.executeCustomerDelete = async function(customerId) {
+  try {
+    await deleteDoc(doc(db, "customers", customerId));
+  } catch (err) {
+    console.error("Delete failed:", err);
+    alert("ডিলিট করতে সমস্যা হয়েছে!");
+  }
+};
+
+window.sendWhatsAppInvoice = function (custId) {
+  const cust = (appStore.customers || []).find(c => c.id === custId);
+  if (!cust) return;
+
+  let msg = `*--- ইনভয়েস / সার্ভিস ডিটেইলস ---*\n`;
+  msg += `👤 কাস্টমার: ${cust.name}\n`;
+  msg += `📱 ফোন নম্বর: ${cust.phone}\n`;
+
+  if (cust.hasFamily) {
+    msg += `\n*ফ্যামিলি প্যাকেজ ডিটেইলস:*\n`;
+    msg += `👑 মূল সিম: ${cust.masterSim || 'N/A'}\n`;
+    msg += `📦 প্যাকেজ: ${cust.pkgTitle || 'সাধারণ'}\n`;
+    msg += `🌐 ইন্টারনেট: ${cust.dataGb || 0} GB\n`;
+    msg += `📞 মিনিট: ${cust.minutes || 0} Min\n`;
+    if (cust.sms) msg += `✉️ SMS: ${cust.sms}\n`;
+  }
+
+  if (cust.hasYoutube) {
+    msg += `\n*YouTube Premium একাউন্ট:*\n`;
+    msg += `📧 ইমেইল: ${cust.ytEmail || 'N/A'}\n`;
+    msg += `🔑 পাসওয়ার্ড: ${cust.ytPassword || 'N/A'}\n`;
+    if (cust.ytNote) msg += `📝 নোট: ${cust.ytNote}\n`;
+  }
+
+  msg += `\n💰 মোট মূল্য: ${cust.price || 0} ৳\n`;
+  
+  if (cust.expiryDate) {
+    const exp = new Date(cust.expiryDate);
+    const diff = Math.ceil((exp - new Date()) / (1000 * 60 * 60 * 24));
+    msg += `📅 মেয়াদ: ${diff > 0 ? diff + ' দিন বাকি' : 'মেয়াদ শেষ'}\n`;
+  }
+
+  const encoded = encodeURIComponent(msg);
+  window.open(`https://wa.me/88${cust.phone}?text=${encoded}`, '_blank');
+};
+
+window.closeAnyModal = function () {
+  const modal = document.getElementById("modal-container");
+  if (modal) modal.style.display = "none";
+};
